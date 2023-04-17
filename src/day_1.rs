@@ -42,17 +42,21 @@ pub fn day_1_part_2(file_path: String) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
+
     use crate::utilities::file_utilities::get_file_path;
 
-    #[test]
-    fn test_part_1() {
-        assert_eq!(514579, day_1_part_1(get_file_path(true, 1)));
-        assert_eq!(1010299, day_1_part_1(get_file_path(false, 1)));
+    #[rstest]
+    #[case(true, 514579)]
+    #[case(false, 1010299)]
+    fn test_part_1(#[case] is_test: bool, #[case] expected: i32) {
+        assert_eq!(expected, day_1_part_1(get_file_path(is_test, 1)));
     }
 
-    #[test]
-    fn test_part_2() {
-        assert_eq!(241861950, day_1_part_2(get_file_path(true, 1)));
-        assert_eq!(42140160, day_1_part_2(get_file_path(false, 1)));
+    #[rstest]
+    #[case(true, 241861950)]
+    #[case(false, 42140160)]
+    fn test_part_2(#[case] is_test: bool, #[case] expected: i32) {
+        assert_eq!(expected, day_1_part_2(get_file_path(is_test, 1)));
     }
 }
