@@ -1,66 +1,92 @@
-#![allow(non_snake_case)]
+use std::str;
 
-mod utilities;
-
-use std::io::{self};
-
-// use itertools::Itertools;
-use regex::Regex;
-
-use crate::utilities::file_utilities::{get_file_path, read_lines};
+use crate::utilities::file_utilities::read_lines;
 
 
-fn parse_line(line: io::Result<String>) -> (usize, usize, String , String ) {
-    // 2-9 c: ccccccccc
-    let re = Regex::new(r"(\d{1,2})-(\d{1,2}) (\w): (\w{1,30})").unwrap();
-    let line = line.unwrap();
-    let caps = re.captures(&line).unwrap();
-
-    println!("{:?}", caps);
-
-    return (
-        caps[1].parse::<usize>().unwrap(),
-        caps[2].parse::<usize>().unwrap(),
-        caps[3].to_owned(),
-        caps[4].to_owned(),
-    );
+struct PolicyPassword {
+    first_number: usize,
+    second_number: usize,
+    character: String,
+    password: String,
 }
 
-fn run(file_path: String) {
-    let tuples: Vec<(usize, usize, String, String)> = read_lines(file_path)
-        .expect("This should work fine...")
-        .map(|line| parse_line(line))
-        .collect();
 
+fn parse_line(line: &str) -> PolicyPassword {
+    // 2-9 c: ccccccccc
+    let password_policy: Vec<&str> = line.split(':').map(str::trim).collect();
+    let policy = password_policy[0];
+    let password = password_policy[1];
+
+    let numbers_character: Vec<&str> = policy.split(' ').map(str::trim).collect();
+    let numbers = numbers_character[0];
+    let character = numbers_character[1];
+
+    let number_split: Vec<&str> = numbers.split('-').map(str::trim).collect();
+    let first_number = number_split[0];
+    let second_number = number_split[1];
+
+    PolicyPassword {
+        first_number: first_number.parse::<usize>().unwrap(),
+        second_number: second_number.parse::<usize>().unwrap(),
+        character: String::from(character),
+        password: String::from(password),
+    }
+}
+
+fn parse_data(file_path: String) -> Vec<PolicyPassword> {
+    read_lines(file_path)
+        .expect("This should work fine...")
+        .map(|line| parse_line(line.unwrap().as_str()))
+        .collect()
+}
+
+pub fn part_1(file_path: String) -> i32 {
     let mut valid_count = 0;
+
+    for password_policy in parse_data(file_path).into_iter() {
+        let matches = password_policy.password.matches(&password_policy.character).count();
+
+        if password_policy.first_number <= matches && matches <= password_policy.second_number {
+            valid_count += 1;
+        }
+    }
+
+    valid_count
+}
+
+pub fn part_2(file_path: String) -> i32 {
     let mut valid_count_2 = 0;
 
-    for tuple in tuples {
-        let (first_number, second_number, character, string) = tuple;
-        let matches = string.matches(&character).count();
-
-        if first_number <= matches && matches <= second_number {
-            valid_count = valid_count + 1;
-        }
-
-        let first_equal = string[first_number - 1..=first_number - 1] == character;
-        let second_equal = string[second_number - 1..=second_number - 1] == character;
+    for password_policy in parse_data(file_path).into_iter() {
+        let first_equal = password_policy.password[password_policy.first_number - 1..=password_policy.first_number - 1] == password_policy.character;
+        let second_equal = password_policy.password[password_policy.second_number - 1..=password_policy.second_number - 1] == password_policy.character;
 
         if (first_equal && !second_equal) || (!first_equal && second_equal) {
             valid_count_2 = valid_count_2 + 1;
         }
     }
 
-    println!("There are {valid_count} valid passwords for part 1.");
-    println!("There are {valid_count_2} valid passwords for part 2.");
+    valid_count_2
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
 
-fn main() {
-    let day = 2;
-    let is_test = false;
+    use crate::utilities::file_utilities::get_file_path;
 
-    let file_path = get_file_path(is_test, day);
+    #[rstest]
+    #[case(true, 2)]
+    #[case(false, 422)]
+    fn test_part_1(#[case] is_test: bool, #[case] expected: i32) {
+        assert_eq!(expected, part_1(get_file_path(is_test, 2)));
+    }
 
-    run(file_path);
+    #[rstest]
+    #[case(true, 1)]
+    #[case(false, 451)]
+    fn test_part_2(#[case] is_test: bool, #[case] expected: i32) {
+        assert_eq!(expected, part_2(get_file_path(is_test, 2)));
+    }
 }

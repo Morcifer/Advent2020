@@ -15,7 +15,7 @@ fn parse_data(file_path: String) -> Vec<i32> {
         .collect()
 }
 
-pub fn day_1_part_1(file_path: String) -> i32 {
+pub fn part_1(file_path: String) -> i32 {
     let numbers = parse_data(file_path);
 
     for pair in numbers.into_iter().combinations(2) {
@@ -27,7 +27,7 @@ pub fn day_1_part_1(file_path: String) -> i32 {
     -1
 }
 
-pub fn day_1_part_2(file_path: String) -> i32 {
+pub fn part_2(file_path: String) -> i32 {
     let numbers = parse_data(file_path);
 
     for pair in numbers.into_iter().combinations(3) {
@@ -50,13 +50,13 @@ mod tests {
     #[case(true, 514579)]
     #[case(false, 1010299)]
     fn test_part_1(#[case] is_test: bool, #[case] expected: i32) {
-        assert_eq!(expected, day_1_part_1(get_file_path(is_test, 1)));
+        assert_eq!(expected, part_1(get_file_path(is_test, 1)));
     }
 
     #[rstest]
     #[case(true, 241861950)]
     #[case(false, 42140160)]
     fn test_part_2(#[case] is_test: bool, #[case] expected: i32) {
-        assert_eq!(expected, day_1_part_2(get_file_path(is_test, 1)));
+        assert_eq!(expected, part_2(get_file_path(is_test, 1)));
     }
 }
