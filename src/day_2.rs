@@ -43,32 +43,24 @@ fn parse_data(file_path: String) -> Vec<PolicyPassword> {
 pub fn part_1(file_path: String) -> i32 {
     parse_data(file_path)
         .iter()
-        .map(|password_policy| {
+        .filter(|password_policy| {
             let matches = password_policy.password.matches(&password_policy.character).count();
 
-            if password_policy.first_number <= matches && matches <= password_policy.second_number {
-                return 1;
-            }
-
-            0
+            password_policy.first_number <= matches && matches <= password_policy.second_number
         })
-        .sum()
+        .count() as i32
 }
 
 pub fn part_2(file_path: String) -> i32 {
     parse_data(file_path)
         .iter()
-        .map(|password_policy| {
+        .filter(|password_policy| {
             let first_equal = password_policy.password[password_policy.first_number - 1..=password_policy.first_number - 1] == password_policy.character;
             let second_equal = password_policy.password[password_policy.second_number - 1..=password_policy.second_number - 1] == password_policy.character;
 
-            if (first_equal && !second_equal) || (!first_equal && second_equal) {
-                return 1;
-            }
-
-            0
+            (first_equal && !second_equal) || (!first_equal && second_equal)
         })
-        .sum()
+        .count() as i32
 }
 
 #[cfg(test)]
