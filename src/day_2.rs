@@ -2,14 +2,12 @@ use std::str;
 
 use crate::utilities::file_utilities::read_lines;
 
-
 struct PolicyPassword {
     first_number: usize,
     second_number: usize,
     character: String,
     password: String,
 }
-
 
 fn parse_line(line: &str) -> PolicyPassword {
     // 2-9 c: ccccccccc
@@ -44,7 +42,10 @@ pub fn part_1(file_path: String) -> i32 {
     parse_data(file_path)
         .iter()
         .filter(|password_policy| {
-            let matches = password_policy.password.matches(&password_policy.character).count();
+            let matches = password_policy
+                .password
+                .matches(&password_policy.character)
+                .count();
 
             password_policy.first_number <= matches && matches <= password_policy.second_number
         })
@@ -55,8 +56,12 @@ pub fn part_2(file_path: String) -> i32 {
     parse_data(file_path)
         .iter()
         .filter(|password_policy| {
-            let first_equal = password_policy.password[password_policy.first_number - 1..=password_policy.first_number - 1] == password_policy.character;
-            let second_equal = password_policy.password[password_policy.second_number - 1..=password_policy.second_number - 1] == password_policy.character;
+            let first_equal = password_policy.password
+                [password_policy.first_number - 1..=password_policy.first_number - 1]
+                == password_policy.character;
+            let second_equal = password_policy.password
+                [password_policy.second_number - 1..=password_policy.second_number - 1]
+                == password_policy.character;
 
             (first_equal && !second_equal) || (!first_equal && second_equal)
         })

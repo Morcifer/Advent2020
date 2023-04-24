@@ -10,12 +10,6 @@ fn main() {
     let day = 2;
     let is_test = false;
 
-    println!(
-        "Day {day} Part 1: {}",
-        part_1(get_file_path(is_test, day))
-    );
-    println!(
-        "Day {day} Part 2: {}",
-        part_2(get_file_path(is_test, day))
-    );
+    println!("Day {day} Part 1: {}", part_1(get_file_path(is_test, day)));
+    println!("Day {day} Part 2: {}", part_2(get_file_path(is_test, day)));
 }
