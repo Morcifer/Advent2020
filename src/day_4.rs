@@ -11,7 +11,7 @@ fn parse_line(line: String) -> Passport {
     let fields: collections::HashMap<String, String> = line
         .split(' ')
         .map(str::trim)
-        .map(|field| field.split(":").map(str::trim).collect::<Vec<&str>>())
+        .map(|field| field.split(':').map(str::trim).collect::<Vec<&str>>())
         .map(|key_value| (String::from(key_value[0]), String::from(key_value[1])))
         .collect();
 
@@ -132,11 +132,10 @@ pub fn part_2(file_path: String) -> i64 {
 
             if let Ok(hgt_number) = hgt_value.parse::<i32>() {
                 // (Height) - a number followed by either cm or in. 150 <= cm <= 193; 59 <= in <= 76
-                if hgt_type == "cm" && !(150..=193).contains(&hgt_number) {
-                    return false;
-                } else if hgt_type == "in" && !(59..=76).contains(&hgt_number) {
-                    return false;
-                } else if hgt_type != "cm" && hgt_type != "in" {
+                if hgt_type == "cm" && !(150..=193).contains(&hgt_number)
+                    || hgt_type == "in" && !(59..=76).contains(&hgt_number)
+                    || hgt_type != "cm" && hgt_type != "in"
+                {
                     return false;
                 }
             } else {
