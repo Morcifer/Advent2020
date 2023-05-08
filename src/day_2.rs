@@ -33,8 +33,8 @@ fn parse_line(line: &str) -> PolicyPassword {
 
 fn parse_data(file_path: String) -> Vec<PolicyPassword> {
     read_lines(file_path)
-        .expect("This should work fine...")
-        .map(|line| parse_line(line.unwrap().as_str()))
+        .into_iter()
+        .map(|line| parse_line(line.as_str()))
         .collect()
 }
 

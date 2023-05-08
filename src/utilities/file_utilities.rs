@@ -7,10 +7,10 @@ pub fn get_file_path(is_test: bool, day: u32) -> String {
     format!("./data/{sub_folder}/day{day}.txt")
 }
 
-pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+pub fn read_lines<P>(filename: P) -> Vec<String>
 where
     P: AsRef<Path>,
 {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
+    let file = File::open(filename).unwrap();
+    io::BufReader::new(file).lines().map(|line| line.unwrap()).collect()
 }

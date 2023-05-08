@@ -1,13 +1,4 @@
-#![allow(non_snake_case)]
-
-use std::io::{self};
-
 use crate::utilities::file_utilities::read_lines;
-
-
-fn parse_line(line: io::Result<String>) -> String {
-    line.unwrap()
-}
 
 
 fn tree_is_in_position(inputs: &Vec<String>, spot_row: usize, spot_column: usize) -> bool {
@@ -40,19 +31,13 @@ fn solve(trees: &Vec<String>, dx: usize, dy: usize) -> i64 {
 
 
 pub fn part_1(file_path: String) -> i64 {
-    let trees: Vec<String> = read_lines(file_path)
-        .expect("This should work fine...")
-        .map(|line| parse_line(line))
-        .collect();
+    let trees: Vec<String> = read_lines(file_path);
 
     solve(&trees, 3, 1)
 }
 
 pub fn part_2(file_path: String) -> i64 {
-    let trees: Vec<String> = read_lines(file_path)
-        .expect("This should work fine...")
-        .map(|line| parse_line(line))
-        .collect();
+    let trees: Vec<String> = read_lines(file_path);
 
     vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)]
         .into_iter()

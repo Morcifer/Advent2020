@@ -1,16 +1,14 @@
-use std::io;
-
 use itertools::Itertools;
 
 use crate::utilities::file_utilities::read_lines;
 
-fn parse_line_to_int(line: io::Result<String>) -> i32 {
-    line.unwrap().parse::<i32>().unwrap()
+fn parse_line_to_int(line: String) -> i32 {
+    line.parse::<i32>().unwrap()
 }
 
 fn parse_data(file_path: String) -> Vec<i32> {
     read_lines(file_path)
-        .expect("This should work fine...")
+        .into_iter()
         .map(parse_line_to_int)
         .collect()
 }
