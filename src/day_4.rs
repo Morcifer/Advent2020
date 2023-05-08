@@ -1,21 +1,33 @@
-#![allow(non_snake_case)]
+use itertools::Itertools;
 
-mod utilities;
+use crate::utilities::file_utilities::read_lines;
 
-use std::io::{self};
-
-// use itertools::Itertools;
-// use regex::Regex;
-
-use crate::utilities::file_utilities::{get_file_path, read_lines};
-
-
-fn parse_line(line: io::Result<String>) -> String {
-    line.unwrap()
+struct Passport {
+    full: String,
 }
 
+fn parse_line(line: String) -> Passport {
+    Passport { full: line }
+}
 
-fn run(file_path: String) {
+fn parse_data(file_path: String) -> Vec<Passport> {
+    read_lines(file_path)
+        .into_iter()
+        .coalesce(|x, y| {
+            if x.is_empty() == y.is_empty() {
+                Ok(format!("{} {}", x, y))
+            } else {
+                Err((x, y))
+            }
+        })
+        .filter(|s| !s.is_empty())
+        .map(parse_line)
+        .collect()
+}
+
+pub fn part_1(file_path: String) -> i64 {
+    let passports = parse_data(file_path);
+
     let required_fields = vec![
         "byr", // (Birth Year)
         "iyr", // (Issue Year)
@@ -26,50 +38,35 @@ fn run(file_path: String) {
         "pid", // (Passport ID)
     ];
 
-    let optional_fields = vec![
-        "cid", // (Country ID)
-    ];
+    // let optional_fields = vec![
+    //     "cid", // (Country ID)
+    // ];
 
-    let inputs: Vec<String> = read_lines(file_path)
-        .expect("This should work fine...")
-        .map(|line| parse_line(line))
-        .collect();
-
-    let mut valid_passports = 0;
-
-    let mut combined_passport: String = "".to_owned();
-    let mut is_valid_passport = true;
-
-    for (index, input) in inputs.iter().enumerate() {
-        combined_passport.push_str(&input);
-        combined_passport.push_str(" ");
-
-        if input == "" || index == inputs.len() - 1 {
+    return passports
+        .iter()
+        .filter(|passport| {
             for required_field in &required_fields {
-                is_valid_passport = is_valid_passport && combined_passport.contains(required_field);
+                if !passport.full.contains(required_field) {
+                    return false;
+                }
             }
 
-            if is_valid_passport {
-                valid_passports += 1;
-                println!("{:?}: {:?}", valid_passports, combined_passport);
-            }
-
-            combined_passport = "".to_owned();
-            is_valid_passport = true;
-        }
-    }
-
-    let part_1_answer = valid_passports;
-
-    println!("Part 1 answer: {part_1_answer}.");  // 215 is too low.
+            true
+        })
+        .count() as i64;
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
 
-fn main() {
-    let day = 4;
-    let is_test = true;
+    use crate::utilities::file_utilities::get_file_path;
 
-    let file_path = get_file_path(is_test, day);
-
-    run(file_path);
+    #[rstest]
+    #[case(true, 2)]
+    #[case(false, 216)]
+    fn test_part_1(#[case] is_test: bool, #[case] expected: i64) {
+        assert_eq!(expected, part_1(get_file_path(is_test, 4)));
+    }
 }

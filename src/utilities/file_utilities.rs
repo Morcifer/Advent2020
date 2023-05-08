@@ -12,5 +12,8 @@ where
     P: AsRef<Path>,
 {
     let file = File::open(filename).unwrap();
-    io::BufReader::new(file).lines().map(|line| line.unwrap()).collect()
+    io::BufReader::new(file)
+        .lines()
+        .map(|line| line.unwrap())
+        .collect()
 }

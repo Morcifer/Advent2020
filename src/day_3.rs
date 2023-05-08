@@ -1,13 +1,11 @@
 use crate::utilities::file_utilities::read_lines;
 
-
 fn tree_is_in_position(inputs: &Vec<String>, spot_row: usize, spot_column: usize) -> bool {
     let spot_row = spot_row;
     let spot_column = spot_column % inputs[0].len();
 
     return inputs[spot_row][spot_column..=spot_column].eq("#");
 }
-
 
 fn solve(trees: &Vec<String>, dx: usize, dy: usize) -> i64 {
     let height = trees.len();
@@ -29,7 +27,6 @@ fn solve(trees: &Vec<String>, dx: usize, dy: usize) -> i64 {
     trees_in_slope
 }
 
-
 pub fn part_1(file_path: String) -> i64 {
     let trees: Vec<String> = read_lines(file_path);
 
@@ -41,12 +38,9 @@ pub fn part_2(file_path: String) -> i64 {
 
     vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)]
         .into_iter()
-        .map(|(dx, dy)| {
-            solve(&trees, dx, dy)
-        })
+        .map(|(dx, dy)| solve(&trees, dx, dy))
         .product::<i64>()
 }
-
 
 #[cfg(test)]
 mod tests {
