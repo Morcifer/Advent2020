@@ -1,21 +1,111 @@
 use itertools::Itertools;
-use std::collections;
 
 use crate::utilities::file_utilities::read_lines;
 
+enum PassportField {
+    BirthYear(String),
+    IssueYear(String),
+    ExpirationYear(String),
+    Height(String),
+    HairColor(String),
+    EyeColor(String),
+    PassportID(String),
+}
+
+fn is_passport_field_valid(passport_field: &PassportField) -> bool {
+    match passport_field {
+        PassportField::BirthYear(year) => match year.parse::<i32>() {
+            Ok(year) => (1920..=2002).contains(&year),
+            Err(_) => false,
+        },
+        PassportField::IssueYear(year) => match year.parse::<i32>() {
+            Ok(year) => (2010..=2020).contains(&year),
+            Err(_) => false,
+        },
+        PassportField::ExpirationYear(year) => match year.parse::<i32>() {
+            Ok(year) => (2020..=2030).contains(&year),
+            Err(_) => false,
+        },
+        PassportField::Height(height) => {
+            let (height_value, height_type) = height.split_at(height.len() - 2);
+            match (height_type, height_value.parse::<i32>()) {
+                ("cm", Ok(height)) => (150..=193).contains(&height),
+                ("in", Ok(height)) => (59..=76).contains(&height),
+                _ => false,
+            }
+        }
+        PassportField::HairColor(color) => {
+            let (hcl_hashtag, hair_color) = color.split_at(1);
+            return hcl_hashtag == "#"
+                && hair_color.len() == 6
+                && hair_color.chars().all(|c| c.is_ascii_hexdigit());
+        }
+        PassportField::EyeColor(color) => {
+            vec!["amb", "blu", "brn", "gry", "grn", "hzl", "oth"].contains(&color.as_str())
+        }
+        PassportField::PassportID(passport_id) => {
+            passport_id.len() == 9 && passport_id.chars().all(|c| c.is_ascii_digit())
+        }
+    }
+}
+
 struct Passport {
-    fields: collections::HashMap<String, String>,
+    #[allow(dead_code)]
+    passport_id: String,
+    keys: Vec<String>,
+    fields: Vec<PassportField>,
+}
+
+fn required_fields() -> Vec<String> {
+    vec![
+        "byr", // (Birth Year) - four digits; at least 1920 and at most 2002.
+        "iyr", // (Issue Year) - four digits; at least 2010 and at most 2020.
+        "eyr", // (Expiration Year) - four digits; at least 2020 and at most 2030.
+        "hgt", // (Height) - a number followed by either cm or in. 150 <= cm <= 193; 59 <= in <= 76
+        "hcl", // (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+        "ecl", // (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
+        "pid", // (Passport ID) - a nine-digit number, including leading zeroes.
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }
 
 fn parse_line(line: String) -> Passport {
-    let fields: collections::HashMap<String, String> = line
+    let mut keys = vec![];
+    let mut passport_id = String::from("");
+
+    let fields: Vec<PassportField> = line
         .split(' ')
         .map(str::trim)
         .map(|field| field.split(':').map(str::trim).collect::<Vec<&str>>())
-        .map(|key_value| (String::from(key_value[0]), String::from(key_value[1])))
+        .filter_map(|key_value| {
+            let key = String::from(key_value[0]);
+            let value = String::from(key_value[1]);
+
+            keys.push(key.clone());
+            match key.as_str() {
+                "byr" => Some(PassportField::BirthYear(value)),
+                "iyr" => Some(PassportField::IssueYear(value)),
+                "eyr" => Some(PassportField::ExpirationYear(value)),
+                "hgt" => Some(PassportField::Height(value)),
+                "hcl" => Some(PassportField::HairColor(value)),
+                "ecl" => Some(PassportField::EyeColor(value)),
+                "pid" => {
+                    passport_id = value.clone();
+                    Some(PassportField::PassportID(value))
+                }
+                "cid" => None,
+                &_ => None, // Should fail here?
+            }
+        })
         .collect();
 
-    Passport { fields }
+    Passport {
+        passport_id,
+        keys,
+        fields,
+    }
 }
 
 fn parse_data(file_path: String) -> Vec<Passport> {
@@ -36,21 +126,11 @@ fn parse_data(file_path: String) -> Vec<Passport> {
 pub fn part_1(file_path: String) -> i64 {
     let passports = parse_data(file_path);
 
-    let required_fields = vec![
-        "byr", // (Birth Year)
-        "iyr", // (Issue Year)
-        "eyr", // (Expiration Year)
-        "hgt", // (Height)
-        "hcl", // (Hair Color)
-        "ecl", // (Eye Color)
-        "pid", // (Passport ID)
-    ];
-
     return passports
         .iter()
         .filter(|passport| {
-            for required_field in &required_fields {
-                if !passport.fields.contains_key(&String::from(*required_field)) {
+            for required_field in &required_fields() {
+                if !passport.keys.contains(required_field) {
                     return false;
                 }
             }
@@ -63,123 +143,18 @@ pub fn part_1(file_path: String) -> i64 {
 pub fn part_2(file_path: String) -> i64 {
     let passports = parse_data(file_path);
 
-    let required_fields = vec![
-        "byr", // (Birth Year) - four digits; at least 1920 and at most 2002.
-        "iyr", // (Issue Year) - four digits; at least 2010 and at most 2020.
-        "eyr", // (Expiration Year) - four digits; at least 2020 and at most 2030.
-        "hgt", // (Height) - a number followed by either cm or in. 150 <= cm <= 193; 59 <= in <= 76
-        "hcl", // (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
-        "ecl", // (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
-        "pid", // (Passport ID) - a nine-digit number, including leading zeroes.
-    ];
-
     return passports
         .iter()
         .filter(|passport| {
-            for required_field in &required_fields {
-                if !passport.fields.contains_key(&String::from(*required_field)) {
+            for required_field in &required_fields() {
+                if !passport.keys.contains(required_field) {
                     return false;
                 }
             }
 
             true
         })
-        .filter(|passport| {
-            if let Ok(byr) = passport
-                .fields
-                .get(&String::from("byr"))
-                .unwrap()
-                .parse::<i32>()
-            {
-                // (Birth Year) - four digits; at least 1920 and at most 2002.
-                if !(1920..=2002).contains(&byr) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-
-            if let Ok(iyr) = passport
-                .fields
-                .get(&String::from("iyr"))
-                .unwrap()
-                .parse::<i32>()
-            {
-                // (Issue Year) - four digits; at least 2010 and at most 2020.
-                if !(2010..=2020).contains(&iyr) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-
-            if let Ok(eyr) = passport
-                .fields
-                .get(&String::from("eyr"))
-                .unwrap()
-                .parse::<i32>()
-            {
-                // (Issue Year) - four digits; at least 2010 and at most 2020.
-                if !(2020..=2030).contains(&eyr) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-
-            let hgt = passport.fields.get(&String::from("hgt")).unwrap();
-            let (hgt_value, hgt_type) = hgt.split_at(hgt.len() - 2);
-
-            if let Ok(hgt_number) = hgt_value.parse::<i32>() {
-                // (Height) - a number followed by either cm or in. 150 <= cm <= 193; 59 <= in <= 76
-                if hgt_type == "cm" && !(150..=193).contains(&hgt_number)
-                    || hgt_type == "in" && !(59..=76).contains(&hgt_number)
-                    || hgt_type != "cm" && hgt_type != "in"
-                {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-
-            // (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
-            let hcl = passport.fields.get(&String::from("hcl")).unwrap();
-            let (hcl_hashtag, hcl_value) = hcl.split_at(1);
-            if hcl_hashtag != "#" || hcl_value.len() != 6 {
-                return false;
-            }
-
-            let valid_numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-            let valid_letters = ["a", "b", "c", "d", "e", "f"];
-            for hcl_char in hcl_value.chars() {
-                if !valid_numbers.contains(&&*hcl_char.to_string())
-                    && !valid_letters.contains(&&*hcl_char.to_string())
-                {
-                    return false;
-                }
-            }
-
-            // (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
-            let ecl = passport.fields.get("ecl").unwrap();
-            let valid_colors = vec!["amb", "blu", "brn", "gry", "grn", "hzl", "oth"];
-            if !valid_colors.contains(&ecl.as_str()) {
-                return false;
-            }
-
-            // (Passport ID) - a nine-digit number, including leading zeroes.
-            let pid = passport.fields.get(&String::from("pid")).unwrap();
-            if pid.len() != 9 {
-                return false;
-            }
-
-            for pid_char in pid.chars() {
-                if !valid_numbers.contains(&&*pid_char.to_string()) {
-                    return false;
-                }
-            }
-
-            true
-        })
+        .filter(|passport| passport.fields.iter().all(is_passport_field_valid))
         .count() as i64;
 }
 
