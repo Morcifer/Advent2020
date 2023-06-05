@@ -12,9 +12,10 @@ enum Instruction {
 
 fn parse_line(line: &str) -> Instruction {
     let operation_number: Vec<&str> = line.split(' ').map(str::trim).collect();
+    let value = operation_number[1].parse::<i32>().unwrap();
     match operation_number[0] {
-        "acc" => Instruction::Accumulate(operation_number[1].parse::<i32>().unwrap()),
-        "jmp" => Instruction::Jump(operation_number[1].parse::<i32>().unwrap()),
+        "acc" => Instruction::Accumulate(value),
+        "jmp" => Instruction::Jump(value),
         "nop" => Instruction::NoOp,
         _ => panic!(),
     }
