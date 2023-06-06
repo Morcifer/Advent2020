@@ -7,7 +7,7 @@ use crate::utilities::file_utilities::read_lines;
 enum Instruction {
     Accumulate(i32),
     Jump(i32),
-    NoOp,
+    NoOp(i32),
 }
 
 fn parse_line(line: &str) -> Instruction {
@@ -16,7 +16,7 @@ fn parse_line(line: &str) -> Instruction {
     match operation_number[0] {
         "acc" => Instruction::Accumulate(value),
         "jmp" => Instruction::Jump(value),
-        "nop" => Instruction::NoOp,
+        "nop" => Instruction::NoOp(value),
         _ => panic!(),
     }
 }
@@ -49,7 +49,7 @@ fn simulate(instructions: Vec<Instruction>) -> (i32, bool) {
             Instruction::Jump(value) => {
                 instruction_index = (instruction_index as i32 + value) as usize;
             }
-            Instruction::NoOp => {
+            Instruction::NoOp(_) => {
                 instruction_index += 1;
             }
         }
@@ -67,14 +67,16 @@ pub fn part_1(file_path: String) -> i32 {
 pub fn part_2(file_path: String) -> i32 {
     let instructions = parse_data(file_path);
 
-    // Try to replace a jmp with a nop:
+    // Try to replace a jmp with a nop or vice-versa
     for instruction_index in 0..instructions.len() {
-        if !matches!(instructions[instruction_index], Instruction::Jump(_)) {
-            continue;
-        }
+        let new_instruction = match instructions[instruction_index] {
+            Instruction::Accumulate(value) => Instruction::Accumulate(value),
+            Instruction::Jump(value) => Instruction::NoOp(value),
+            Instruction::NoOp(value) => Instruction::Jump(value),
+        };
 
         let mut new_instructions = instructions.clone();
-        new_instructions[instruction_index] = Instruction::NoOp;
+        new_instructions[instruction_index] = new_instruction;
 
         let (accumulator, successful_termination) = simulate(new_instructions);
 
@@ -82,8 +84,6 @@ pub fn part_2(file_path: String) -> i32 {
             return accumulator;
         }
     }
-
-    // Never did end up having to try to replace a nop with a jmp...
 
     -1
 }
