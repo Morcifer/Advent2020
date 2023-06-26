@@ -104,34 +104,29 @@ pub fn part_2(file_path: String) -> usize {
 
             (
                 *seat,
-                [
-                    (0, 1),
-                    (0, -1),
-                    (1, 0),
-                    (-1, 0),
-                    (1, 1),
-                    (-1, -1),
-                    (1, -1),
-                    (-1, 1),
-                ]
-                .into_iter()
-                .filter_map(|(delta_row, delta_column)| {
-                    let mut new_row = row + delta_row;
-                    let mut new_column = column + delta_column;
-
-                    while (0..height).contains(&new_row) && (0..width).contains(&new_column) {
-                        // Stop at first.
-                        if seats.contains(&(new_row, new_column)) {
-                            return Some((new_row, new_column));
+                (-1..=1)
+                    .cartesian_product(-1..=1)
+                    .filter_map(|(delta_row, delta_column)| {
+                        if delta_row == 0 && delta_column == 0 {
+                            return None;
                         }
 
-                        new_row += delta_row;
-                        new_column += delta_column;
-                    }
+                        let mut new_row = row + delta_row;
+                        let mut new_column = column + delta_column;
 
-                    None
-                })
-                .collect::<Vec<(isize, isize)>>(),
+                        while (0..height).contains(&new_row) && (0..width).contains(&new_column) {
+                            // Stop at first.
+                            if seats.contains(&(new_row, new_column)) {
+                                return Some((new_row, new_column));
+                            }
+
+                            new_row += delta_row;
+                            new_column += delta_column;
+                        }
+
+                        None
+                    })
+                    .collect::<Vec<(isize, isize)>>(),
             )
         })
         .collect();
