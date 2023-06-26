@@ -17,42 +17,28 @@ fn get_all_seats(inputs: &Vec<String>) -> (FxHashSet<(isize, isize)>, isize, isi
     (seats, height as isize, width as isize)
 }
 
-pub fn part_1(file_path: String) -> usize {
-    let map: Vec<String> = read_lines(file_path);
-    let (seats, height, width) = get_all_seats(&map);
-
+fn solve(
+    seats: &FxHashSet<(isize, isize)>,
+    visible_seats: &FxHashMap<(isize, isize), Vec<(isize, isize)>>,
+    seat_limit_for_empty: usize,
+) -> usize {
     let mut filled_seats: FxHashSet<(isize, isize)> = FxHashSet::default();
 
     loop {
-        // println!("New iteration with {} filled seats out of {}!", filled_seats.len(), seats.len());
         let mut new_filled_seats: FxHashSet<(isize, isize)> = FxHashSet::default();
         let mut new_emptied_seats: FxHashSet<(isize, isize)> = FxHashSet::default();
 
         for seat in seats.iter() {
-            let (row, column) = *seat;
+            let visible_occupied = visible_seats
+                .get(seat)
+                .unwrap()
+                .iter()
+                .filter(|spot| filled_seats.contains(spot))
+                .count();
 
-            // (-1..=1).cartesian_product(-1..=1)
-            let adjacent_occupied = [
-                (0, 1),
-                (0, -1),
-                (1, 0),
-                (-1, 0),
-                (1, 1),
-                (-1, -1),
-                (1, -1),
-                (-1, 1),
-            ]
-            .into_iter()
-            .map(|(delta_row, delta_column)| (row + delta_row, column + delta_column))
-            .filter(|(new_row, new_column)| {
-                (0..height).contains(new_row) && (0..width).contains(new_column)
-            })
-            .filter(|spot| filled_seats.contains(spot))
-            .count();
-
-            if adjacent_occupied == 0 && !filled_seats.contains(seat) {
+            if visible_occupied == 0 && !filled_seats.contains(seat) {
                 new_filled_seats.insert(*seat);
-            } else if adjacent_occupied >= 4 && filled_seats.contains(seat) {
+            } else if visible_occupied >= seat_limit_for_empty && filled_seats.contains(seat) {
                 new_emptied_seats.insert(*seat);
             }
         }
@@ -60,10 +46,6 @@ pub fn part_1(file_path: String) -> usize {
         if new_filled_seats.is_empty() && new_emptied_seats.is_empty() {
             break;
         }
-
-        // println!("Original filled: {filled_seats:?}");
-        // println!("New emptied: {new_emptied_seats:?}");
-        // println!("New filled: {new_filled_seats:?}");
 
         filled_seats = filled_seats
             .difference(&new_emptied_seats)
@@ -73,6 +55,48 @@ pub fn part_1(file_path: String) -> usize {
     }
 
     filled_seats.len()
+}
+
+pub fn part_1(file_path: String) -> usize {
+    let map: Vec<String> = read_lines(file_path);
+    let (seats, height, width) = get_all_seats(&map);
+    let visible_seats: FxHashMap<(isize, isize), Vec<(isize, isize)>> = seats
+        .iter()
+        .map(|seat| {
+            let (row, column) = *seat;
+
+            (
+                *seat,
+                [
+                    (0, 1),
+                    (0, -1),
+                    (1, 0),
+                    (-1, 0),
+                    (1, 1),
+                    (-1, -1),
+                    (1, -1),
+                    (-1, 1),
+                ]
+                .into_iter()
+                .filter_map(|(delta_row, delta_column)| {
+                    let new_row = row + delta_row;
+                    let new_column = column + delta_column;
+
+                    if (0..height).contains(&new_row)
+                        && (0..width).contains(&new_column)
+                        && seats.contains(&(new_row, new_column))
+                    {
+                        return Some((new_row, new_column));
+                    }
+
+                    None
+                })
+                .collect::<Vec<(isize, isize)>>(),
+            )
+        })
+        .collect();
+
+    solve(&seats, &visible_seats, 4)
 }
 
 pub fn part_2(file_path: String) -> usize {
@@ -117,45 +141,7 @@ pub fn part_2(file_path: String) -> usize {
         })
         .collect();
 
-    let mut filled_seats: FxHashSet<(isize, isize)> = FxHashSet::default();
-
-    loop {
-        // println!("New iteration with {} filled seats out of {}!", filled_seats.len(), seats.len());
-        let mut new_filled_seats: FxHashSet<(isize, isize)> = FxHashSet::default();
-        let mut new_emptied_seats: FxHashSet<(isize, isize)> = FxHashSet::default();
-
-        for seat in seats.iter() {
-            // (-1..=1).cartesian_product(-1..=1)
-            let adjacent_occupied = visible_seats
-                .get(seat)
-                .unwrap()
-                .iter()
-                .filter(|spot| filled_seats.contains(spot))
-                .count();
-
-            if adjacent_occupied == 0 && !filled_seats.contains(seat) {
-                new_filled_seats.insert(*seat);
-            } else if adjacent_occupied >= 5 && filled_seats.contains(seat) {
-                new_emptied_seats.insert(*seat);
-            }
-        }
-
-        if new_filled_seats.is_empty() && new_emptied_seats.is_empty() {
-            break;
-        }
-
-        // println!("Original filled: {filled_seats:?}");
-        // println!("New emptied: {new_emptied_seats:?}");
-        // println!("New filled: {new_filled_seats:?}");
-
-        filled_seats = filled_seats
-            .difference(&new_emptied_seats)
-            .cloned()
-            .collect();
-        filled_seats = filled_seats.union(&new_filled_seats).cloned().collect();
-    }
-
-    filled_seats.len()
+    solve(&seats, &visible_seats, 5)
 }
 
 #[cfg(test)]
