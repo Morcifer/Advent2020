@@ -53,97 +53,75 @@ fn simulate_move_in_direction(
     }
 }
 
-fn simulate_single_instruction(
-    state: &(Direction, (i32, i32)),
-    instruction: &Instruction,
-) -> (Direction, (i32, i32)) {
-    match instruction {
-        Instruction::Direction(direction, amount) => (
-            state.0,
-            simulate_move_in_direction(&state.1, direction, *amount),
-        ),
-        Instruction::Forward(amount) => (
-            state.0,
-            simulate_move_in_direction(&state.1, &state.0, *amount),
-        ),
-        Instruction::Left(amount) | Instruction::Right(amount) => {
-            let rotations = match instruction {
-                Instruction::Left(_) => vec![
-                    Direction::East,
-                    Direction::North,
-                    Direction::West,
-                    Direction::South,
-                ],
-                Instruction::Right(_) => vec![
-                    Direction::East,
-                    Direction::South,
-                    Direction::West,
-                    Direction::North,
-                ],
-                _ => panic!(),
-            };
-
-            let mut current_index = rotations.iter().position(|&d| d == state.0).unwrap();
-            let mut degrees = *amount;
-
-            while degrees > 0 {
-                current_index = (current_index + 1) % 4;
-                degrees -= 90;
-            }
-            (rotations[current_index], state.1)
-        }
-    }
-}
-
 pub fn part_1(file_path: String) -> i32 {
     let instructions = parse_data(file_path);
-    let mut state = (Direction::East, (0, 0));
+    let mut ship_direction = Direction::East;
+    let mut ship_point = (0, 0);
 
     for instruction in instructions.iter() {
-        state = simulate_single_instruction(&state, instruction);
-    }
+        match instruction {
+            Instruction::Direction(direction, amount) => {
+                ship_point = simulate_move_in_direction(&ship_point, direction, *amount);
+            }
+            Instruction::Forward(amount) => {
+                ship_point = simulate_move_in_direction(&ship_point, &ship_direction, *amount);
+            }
+            Instruction::Left(amount) | Instruction::Right(amount) => {
+                let rotations = match instruction {
+                    Instruction::Left(_) => vec![
+                        Direction::East,
+                        Direction::North,
+                        Direction::West,
+                        Direction::South,
+                    ],
+                    Instruction::Right(_) => vec![
+                        Direction::East,
+                        Direction::South,
+                        Direction::West,
+                        Direction::North,
+                    ],
+                    _ => panic!(),
+                };
 
-    state.1 .0.abs() + state.1 .1.abs()
-}
+                let old_index = rotations.iter().position(|&d| d == ship_direction).unwrap();
+                let new_index = (((*amount as f64 / 90.0).round() as usize) + old_index) % 4;
 
-fn simulate_single_instruction_2(
-    ship: &(i32, i32),
-    waypoint: &(i32, i32),
-    instruction: &Instruction,
-) -> ((i32, i32), (i32, i32)) {
-    match instruction {
-        Instruction::Direction(direction, amount) => (
-            *ship,
-            simulate_move_in_direction(waypoint, direction, *amount),
-        ),
-        Instruction::Forward(amount) => (
-            (ship.0 + amount * waypoint.0, ship.1 + amount * waypoint.1),
-            *waypoint,
-        ),
-        Instruction::Left(amount) | Instruction::Right(amount) => {
-            let theta = match instruction {
-                Instruction::Left(_) => (*amount as f64).to_radians(),
-                Instruction::Right(_) => -(*amount as f64).to_radians(),
-                _ => panic!(),
-            };
-
-            let waypoint_x = (theta.cos() * waypoint.0 as f64) - (theta.sin() * waypoint.1 as f64);
-            let waypoint_y = (theta.sin() * waypoint.0 as f64) + (theta.cos() * waypoint.1 as f64);
-
-            (
-                *ship,
-                (waypoint_x.round() as i32, waypoint_y.round() as i32),
-            )
+                ship_direction = rotations[new_index];
+            }
         }
     }
+
+    ship_point.0.abs() + ship_point.1.abs()
 }
 
 pub fn part_2(file_path: String) -> i32 {
     let instructions = parse_data(file_path);
     let mut ship = (0, 0);
     let mut waypoint = (10, 1);
+
     for instruction in instructions.iter() {
-        (ship, waypoint) = simulate_single_instruction_2(&ship, &waypoint, instruction);
+        match instruction {
+            Instruction::Direction(direction, amount) => {
+                waypoint = simulate_move_in_direction(&waypoint, direction, *amount);
+            }
+            Instruction::Forward(amount) => {
+                ship = (ship.0 + amount * waypoint.0, ship.1 + amount * waypoint.1);
+            }
+            Instruction::Left(amount) | Instruction::Right(amount) => {
+                let theta = match instruction {
+                    Instruction::Left(_) => (*amount as f64).to_radians(),
+                    Instruction::Right(_) => -(*amount as f64).to_radians(),
+                    _ => panic!(),
+                };
+
+                let waypoint_x = (theta.cos().round() as i32 * waypoint.0)
+                    - (theta.sin().round() as i32 * waypoint.1);
+                let waypoint_y = (theta.sin().round() as i32 * waypoint.0)
+                    + (theta.cos().round() as i32 * waypoint.1);
+
+                waypoint = (waypoint_x, waypoint_y);
+            }
+        }
     }
 
     ship.0.abs() + ship.1.abs()
