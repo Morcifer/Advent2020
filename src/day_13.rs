@@ -39,31 +39,21 @@ pub fn part_1(file_path: String) -> usize {
     min_wait * min_bus
 }
 
-pub fn part_2(file_path: String) -> isize {
+pub fn part_2(file_path: String) -> usize {
     let numbers = parse_data(file_path);
 
-    let mut time = 0_isize;
-    let mut required_modulo = 0_isize;
-    let mut jump = 1_isize;
+    let mut time = 1;
+    let mut jump = 1;
 
-    for bus in numbers[1].iter() {
+    for (required_modulo, bus) in numbers[1].iter().enumerate() {
         if let Some(bus) = bus {
-            let bus = *bus as isize;
             while (time + required_modulo) % bus != 0 {
                 time += jump;
             }
-            println!(
-                "At time {time}, bus {bus} has modulo {required_modulo} (after jumps of {jump})"
-            );
-            required_modulo += 1;
             jump *= bus;
-        } else {
-            // println!("I don't care about modulo {required_modulo} time {time}");
-            required_modulo += 1;
         }
     }
 
-    println!("{time}, {required_modulo}, {jump}");
     time
 }
 
@@ -84,7 +74,7 @@ mod tests {
     #[rstest]
     #[case(true, 1068781)]
     #[case(false, 247086664214628)]
-    fn test_part_2(#[case] is_test: bool, #[case] expected: isize) {
+    fn test_part_2(#[case] is_test: bool, #[case] expected: usize) {
         assert_eq!(expected, part_2(get_file_path(is_test, 13)));
     }
 }
