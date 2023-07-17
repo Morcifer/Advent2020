@@ -7,7 +7,7 @@ const BITS: usize = 36;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum InputType {
-    Mask([Option<usize>; BITS]),
+    Mask(Box<[Option<usize>; BITS]>),
     MemOverride(usize, i64),
 }
 
@@ -24,7 +24,7 @@ fn parse_line(line: &str) -> InputType {
             }
         }
 
-        return InputType::Mask(mask);
+        return InputType::Mask(Box::new(mask));
     }
 
     let length = split_line[0].len();
@@ -48,18 +48,19 @@ pub fn part_1(file_path: String) -> i64 {
 
     for instruction in instructions {
         match instruction {
-            InputType::Mask(m) => mask = m,
+            InputType::Mask(m) => mask = *m,
             InputType::MemOverride(address, value) => {
-                let mut masked_value = 0_i64;
-
-                for (index, mask_bit) in mask.iter().enumerate() {
-                    let bit = (value >> index) & 1;
-                    let masked_bit = match *mask_bit {
-                        None => bit,
-                        Some(b) => b as i64,
-                    };
-                    masked_value += masked_bit * 2_i64.pow(index as u32);
-                }
+                let masked_value = mask
+                    .iter()
+                    .enumerate()
+                    .map(|(index, mask_bit)| {
+                        let masked_bit = match *mask_bit {
+                            None => (value >> index) & 1,
+                            Some(b) => b as i64,
+                        };
+                        masked_bit * 2_i64.pow(index as u32)
+                    })
+                    .sum();
 
                 memory.insert(address, masked_value);
             }
@@ -76,19 +77,18 @@ pub fn part_2(file_path: String) -> i64 {
 
     for instruction in instructions {
         match instruction {
-            InputType::Mask(m) => mask = m,
+            InputType::Mask(m) => mask = *m,
             InputType::MemOverride(address, value) => {
-                let mut masked_address = [None; 36];
-
-                for (index, mask_bit) in mask.iter().enumerate() {
-                    let bit = (address >> index) & 1;
-                    masked_address[index] = match *mask_bit {
+                let masked_address = mask
+                    .iter()
+                    .enumerate()
+                    .map(|(index, mask_bit)| match *mask_bit {
                         None => None,
-                        Some(0) => Some(bit),
+                        Some(0) => Some((address >> index) & 1),
                         Some(1) => Some(1),
                         _ => panic!(),
-                    };
-                }
+                    })
+                    .collect::<Vec<_>>();
 
                 let mut addresses = vec![0];
 
