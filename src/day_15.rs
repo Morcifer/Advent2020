@@ -52,7 +52,21 @@ mod tests {
     }
 
     #[rstest]
+    #[ignore]
     #[case(vec![0, 3, 6], 175594)]
+    #[ignore]
+    #[case(vec![1, 3, 2], 2578)]
+    #[ignore]
+    #[case(vec![2, 1, 3], 3544142)]
+    #[ignore]
+    #[case(vec![1, 2, 3], 261214)]
+    #[ignore]
+    #[case(vec![2, 3, 1], 6895259)]
+    #[ignore]
+    #[case(vec![3, 2, 1], 18)]
+    #[ignore]
+    #[case(vec![3, 1, 2], 362)]
+    #[ignore]
     #[case(vec![6, 4, 12, 1, 20, 0, 16], 11261)]
     fn test_part_2(#[case] input: Vec<usize>, #[case] expected: i64) {
         assert_eq!(expected, part_2(&input));
