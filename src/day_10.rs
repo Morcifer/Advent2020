@@ -73,13 +73,13 @@ mod tests {
     #[case(true, 35)]
     #[case(false, 1914)]
     fn test_part_1(#[case] is_test: bool, #[case] expected: usize) {
-        assert_eq!(expected, part_1(get_file_path(is_test, 10)));
+        assert_eq!(expected, part_1(get_file_path(is_test, 10, None)));
     }
 
     #[rstest]
     #[case(true, 8)]
     #[case(false, 9256148959232)]
     fn test_part_2(#[case] is_test: bool, #[case] expected: usize) {
-        assert_eq!(expected, part_2(get_file_path(is_test, 10)));
+        assert_eq!(expected, part_2(get_file_path(is_test, 10, None)));
     }
 }

@@ -79,7 +79,7 @@ mod tests {
     #[case(false, 217430975)]
     fn test_part_1(#[case] is_test: bool, #[case] expected: usize) {
         let preamble = if is_test { 5 } else { 25 };
-        assert_eq!(expected, part_1(get_file_path(is_test, 9), preamble));
+        assert_eq!(expected, part_1(get_file_path(is_test, 9, None), preamble));
     }
 
     #[rstest]
@@ -87,6 +87,6 @@ mod tests {
     #[case(false, 28509180)]
     fn test_part_2(#[case] is_test: bool, #[case] expected: usize) {
         let preamble = if is_test { 5 } else { 25 };
-        assert_eq!(expected, part_2(get_file_path(is_test, 9), preamble));
+        assert_eq!(expected, part_2(get_file_path(is_test, 9, None), preamble));
     }
 }
