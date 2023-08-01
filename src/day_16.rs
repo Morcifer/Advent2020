@@ -1,15 +1,9 @@
 use crate::utilities::file_utilities::read_lines;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum InputType {
-    Rule(String, (usize, usize), (usize, usize)),
-    Ticket(Vec<usize>),
-}
-
 type Rule = (String, (usize, usize), (usize, usize));
 type Ticket = Vec<usize>;
 
-fn parse_line(line: &str) -> InputType {
+fn parse_line(line: &str) -> (Option<Rule>, Option<Ticket>) {
     if line.contains(':') {
         let split_by_colon: Vec<&str> = line.split(':').map(str::trim).collect();
         let field = split_by_colon[0].to_string();
@@ -17,28 +11,34 @@ fn parse_line(line: &str) -> InputType {
         let rule_1_string: Vec<&str> = two_rules[0].split('-').map(str::trim).collect();
         let rule_2_string: Vec<&str> = two_rules[2].split('-').map(str::trim).collect();
 
-        InputType::Rule(
-            field,
-            (
-                rule_1_string[0].parse::<usize>().unwrap(),
-                rule_1_string[1].parse::<usize>().unwrap(),
-            ),
-            (
-                rule_2_string[0].parse::<usize>().unwrap(),
-                rule_2_string[1].parse::<usize>().unwrap(),
-            ),
+        (
+            Some((
+                field,
+                (
+                    rule_1_string[0].parse::<usize>().unwrap(),
+                    rule_1_string[1].parse::<usize>().unwrap(),
+                ),
+                (
+                    rule_2_string[0].parse::<usize>().unwrap(),
+                    rule_2_string[1].parse::<usize>().unwrap(),
+                ),
+            )),
+            None,
         )
     } else {
-        InputType::Ticket(
-            line.split(',')
-                .map(str::trim)
-                .map(|x| x.parse::<usize>().unwrap())
-                .collect(),
+        (
+            None,
+            Some(
+                line.split(',')
+                    .map(str::trim)
+                    .map(|x| x.parse::<usize>().unwrap())
+                    .collect(),
+            ),
         )
     }
 }
 
-fn parse_data(file_path: String) -> Vec<InputType> {
+fn parse_data(file_path: String) -> Vec<(Option<Rule>, Option<Ticket>)> {
     read_lines(file_path)
         .into_iter()
         .map(|line| parse_line(line.as_str()))
@@ -50,18 +50,16 @@ pub fn part_1(file_path: String) -> i64 {
 
     let rules: Vec<(usize, usize)> = data
         .iter()
-        .flat_map(|datum| match datum {
-            InputType::Rule(_, rule_1, rule_2) => vec![*rule_1, *rule_2],
-            _ => vec![],
-        })
+        .cloned()
+        .filter_map(|(rule, _)| rule)
+        .flat_map(|rule| vec![rule.1, rule.2])
         .collect();
 
     let fields: Vec<usize> = data
         .iter()
-        .flat_map(|datum| match datum {
-            InputType::Ticket(fields) => fields.clone(),
-            _ => vec![],
-        })
+        .cloned()
+        .filter_map(|(_, ticket)| ticket)
+        .flatten()
         .collect();
 
     fields
@@ -78,22 +76,12 @@ pub fn part_1(file_path: String) -> i64 {
 pub fn part_2(file_path: String) -> i64 {
     let data = parse_data(file_path);
 
-    let rules: Vec<Rule> = data
-        .iter()
-        .cloned()
-        .filter_map(|datum| match datum {
-            InputType::Rule(x1, x2, x3) => Some((x1, x2, x3)),
-            _ => None,
-        })
-        .collect();
+    let rules: Vec<Rule> = data.iter().cloned().filter_map(|(rule, _)| rule).collect();
 
     let valid_tickets: Vec<Ticket> = data
         .iter()
         .cloned()
-        .filter_map(|datum| match datum {
-            InputType::Ticket(x) => Some(x),
-            _ => None,
-        })
+        .filter_map(|(_, ticket)| ticket)
         .filter(|ticket| {
             ticket.iter().all(|field| {
                 rules.iter().any(|rule| {
