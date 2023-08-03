@@ -13,28 +13,24 @@ fn parse_data(file_path: String) -> Vec<i32> {
         .collect()
 }
 
-pub fn part_1(file_path: String) -> i32 {
-    let numbers = parse_data(file_path);
-
-    for pair in numbers.into_iter().combinations(2) {
-        if pair[0] + pair[1] == 2020 {
-            return pair[0] * pair[1];
+fn find_product_of_combination_with_given_sum(numbers: Vec<i32>, combination_size: usize) -> i32 {
+    for combination in numbers.into_iter().combinations(combination_size) {
+        if combination.iter().cloned().sum::<i32>() == 2020 {
+            return combination.into_iter().product::<i32>();
         }
     }
 
     -1
 }
 
+pub fn part_1(file_path: String) -> i32 {
+    let numbers = parse_data(file_path);
+    find_product_of_combination_with_given_sum(numbers, 2)
+}
+
 pub fn part_2(file_path: String) -> i32 {
     let numbers = parse_data(file_path);
-
-    for pair in numbers.into_iter().combinations(3) {
-        if pair[0] + pair[1] + pair[2] == 2020 {
-            return pair[0] * pair[1] * pair[2];
-        }
-    }
-
-    -1
+    find_product_of_combination_with_given_sum(numbers, 3)
 }
 
 #[cfg(test)]
