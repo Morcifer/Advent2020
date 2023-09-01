@@ -13,7 +13,9 @@ mod day_13;
 mod day_14;
 #[cfg(test)]
 mod day_15;
+#[cfg(test)]
 mod day_16;
+mod day_17;
 #[cfg(test)]
 mod day_2;
 #[cfg(test)]
@@ -33,30 +35,19 @@ mod day_9;
 
 mod utilities;
 
-use crate::day_16::{part_1, part_2};
+use crate::day_17::{part_1, part_2};
 use crate::utilities::file_utilities::get_file_path;
 
 fn main() {
-    let day = 16;
+    let day = 17;
     let is_test = false;
 
-    if is_test {
-        println!(
-            "Day {day} Part 1: {}",
-            part_1(get_file_path(is_test, day, Some("-a")))
-        );
-        println!(
-            "Day {day} Part 2: {}",
-            part_2(get_file_path(is_test, day, Some("-b")))
-        );
-    } else {
-        println!(
-            "Day {day} Part 1: {}",
-            part_1(get_file_path(is_test, day, None))
-        );
-        println!(
-            "Day {day} Part 2: {}",
-            part_2(get_file_path(is_test, day, None))
-        );
-    }
+    println!(
+        "Day {day} Part 1: {}",
+        part_1(get_file_path(is_test, day, None))
+    );
+    println!(
+        "Day {day} Part 2: {}",
+        part_2(get_file_path(is_test, day, None))
+    );
 }
