@@ -3,56 +3,47 @@ use crate::utilities::file_utilities::read_lines;
 use itertools::iproduct;
 use std::collections::HashSet;
 
-fn get_cube_neighbours(cube: &(isize, isize, isize)) -> Vec<(isize, isize, isize)> {
-    let (x, y, z) = cube;
-    iproduct!(-1..=1, -1..=1, -1..=1)
-        .filter(|(dx, dy, dz)| *dx != 0 || *dy != 0 || *dz != 0)
-        .map(|(dx, dy, dz)| (x + dx, y + dy, z + dz))
-        .collect::<Vec<_>>()
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+enum CoordinateTuple {
+    Coordinates(isize, isize, isize),
+    HyperCoordinates(isize, isize, isize, isize),
 }
 
-fn get_hypercube_neighbours(
-    cube: &(isize, isize, isize, isize),
-) -> Vec<(isize, isize, isize, isize)> {
-    let (x, y, z, t) = cube;
-    iproduct!(-1..=1, -1..=1, -1..=1, -1..=1)
-        .filter(|(dx, dy, dz, dt)| *dx != 0 || *dy != 0 || *dz != 0 || *dt != 0)
-        .map(|(dx, dy, dz, dt)| (x + dx, y + dy, z + dz, t + dt))
-        .collect::<Vec<_>>()
+fn get_neighbours(cube: &CoordinateTuple) -> Vec<CoordinateTuple> {
+    match cube {
+        CoordinateTuple::Coordinates(x, y, z) => iproduct!(-1..=1, -1..=1, -1..=1)
+            .filter(|(dx, dy, dz)| *dx != 0 || *dy != 0 || *dz != 0)
+            .map(|(dx, dy, dz)| CoordinateTuple::Coordinates(x + dx, y + dy, z + dz))
+            .collect::<Vec<_>>(),
+        CoordinateTuple::HyperCoordinates(x, y, z, t) => iproduct!(-1..=1, -1..=1, -1..=1, -1..=1)
+            .filter(|(dx, dy, dz, dt)| *dx != 0 || *dy != 0 || *dz != 0 || *dt != 0)
+            .map(|(dx, dy, dz, dt)| {
+                CoordinateTuple::HyperCoordinates(x + dx, y + dy, z + dz, t + dt)
+            })
+            .collect::<Vec<_>>(),
+    }
 }
 
-pub fn part_1(file_path: String) -> i64 {
-    let input: Vec<String> = read_lines(file_path);
-
-    let mut active_cubes: HashSet<(isize, isize, isize)> = (0..input.len())
-        .flat_map(|y| {
-            input[y]
-                .chars()
-                .enumerate()
-                .filter_map(move |(x, character)| match character {
-                    '#' => Some((x as isize, y as isize, 0)),
-                    _ => None,
-                })
-        })
-        .collect();
+fn simulate(active_cubes: HashSet<CoordinateTuple>) -> HashSet<CoordinateTuple> {
+    let mut active_cubes: HashSet<CoordinateTuple> = active_cubes.into_iter().collect();
 
     for _cycle in 1..=6 {
         // println!("Cycle {cycle} starts with {} active cubes", active_cubes.len());
 
-        let cubes_to_investigate: HashSet<(isize, isize, isize)> = active_cubes
+        let cubes_to_investigate: HashSet<_> = active_cubes
             .iter()
-            .flat_map(get_cube_neighbours)
+            .flat_map(get_neighbours)
             .chain(active_cubes.iter().cloned())
             .collect();
 
         // println!("Cycle {cycle} active_cubes: {active_cubes:?}");
         // println!("Cycle {cycle} cubes_to_investigate: {cubes_to_investigate:?}");
 
-        let still_active_cubes: Vec<(isize, isize, isize)> = cubes_to_investigate
+        let still_active_cubes: Vec<_> = cubes_to_investigate
             .iter()
             .filter(|cube| active_cubes.contains(cube))
             .filter(|cube| {
-                let active_neighbours_count = get_cube_neighbours(cube)
+                let active_neighbours_count = get_neighbours(cube)
                     .iter()
                     .filter(|neighbour| active_cubes.contains(neighbour))
                     .count();
@@ -61,11 +52,11 @@ pub fn part_1(file_path: String) -> i64 {
             .cloned()
             .collect();
 
-        let new_active_cubes: Vec<(isize, isize, isize)> = cubes_to_investigate
+        let new_active_cubes: Vec<_> = cubes_to_investigate
             .iter()
             .filter(|cube| !active_cubes.contains(cube))
             .filter(|cube| {
-                let active_neighbours_count = get_cube_neighbours(cube)
+                let active_neighbours_count = get_neighbours(cube)
                     .iter()
                     .filter(|neighbour| active_cubes.contains(neighbour))
                     .count();
@@ -86,62 +77,47 @@ pub fn part_1(file_path: String) -> i64 {
     // println!("{active_cubes:?}");
     // println!("{} active cubes", active_cubes.len());
 
+    active_cubes
+}
+
+pub fn part_1(file_path: String) -> i64 {
+    let input: Vec<String> = read_lines(file_path);
+
+    let mut active_cubes: HashSet<_> = (0..input.len())
+        .flat_map(|y| {
+            input[y]
+                .chars()
+                .enumerate()
+                .filter_map(move |(x, character)| match character {
+                    '#' => Some(CoordinateTuple::Coordinates(x as isize, y as isize, 0)),
+                    _ => None,
+                })
+        })
+        .collect();
+
+    active_cubes = simulate(active_cubes);
+
     active_cubes.len() as i64
 }
 
 pub fn part_2(file_path: String) -> i64 {
     let input: Vec<String> = read_lines(file_path);
 
-    let mut active_cubes: HashSet<(isize, isize, isize, isize)> = (0..input.len())
+    let mut active_cubes: HashSet<_> = (0..input.len())
         .flat_map(|y| {
             input[y]
                 .chars()
                 .enumerate()
                 .filter_map(move |(x, character)| match character {
-                    '#' => Some((x as isize, y as isize, 0, 0)),
+                    '#' => Some(CoordinateTuple::HyperCoordinates(
+                        x as isize, y as isize, 0, 0,
+                    )),
                     _ => None,
                 })
         })
         .collect();
 
-    for _ in 1..=6 {
-        let cubes_to_investigate: HashSet<(isize, isize, isize, isize)> = active_cubes
-            .iter()
-            .flat_map(get_hypercube_neighbours)
-            .chain(active_cubes.iter().cloned())
-            .collect();
-
-        let still_active_cubes: Vec<(isize, isize, isize, isize)> = cubes_to_investigate
-            .iter()
-            .filter(|cube| active_cubes.contains(cube))
-            .filter(|cube| {
-                let active_neighbours_count = get_hypercube_neighbours(cube)
-                    .iter()
-                    .filter(|neighbour| active_cubes.contains(neighbour))
-                    .count();
-                (2..=3).contains(&active_neighbours_count)
-            })
-            .cloned()
-            .collect();
-
-        let new_active_cubes: Vec<(isize, isize, isize, isize)> = cubes_to_investigate
-            .iter()
-            .filter(|cube| !active_cubes.contains(cube))
-            .filter(|cube| {
-                let active_neighbours_count = get_hypercube_neighbours(cube)
-                    .iter()
-                    .filter(|neighbour| active_cubes.contains(neighbour))
-                    .count();
-                active_neighbours_count == 3
-            })
-            .cloned()
-            .collect();
-
-        active_cubes = still_active_cubes
-            .into_iter()
-            .chain(new_active_cubes.into_iter())
-            .collect();
-    }
+    active_cubes = simulate(active_cubes);
 
     active_cubes.len() as i64
 }
