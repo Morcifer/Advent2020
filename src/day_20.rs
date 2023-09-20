@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::utilities::file_utilities::read_lines;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 type Tile = (isize, Vec<(isize, isize)>);
 
@@ -106,9 +106,13 @@ fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> HashSet<isize> {
     }
 }
 
-pub fn tiles_match(tile_1: &Tile, tile_2: &Tile) -> bool {
+fn tiles_match(
+    tile_1: &Tile,
+    tile_1_rotation: &Rotation,
+    tile_2: &Tile,
+) -> Option<(Edge, Edge, Rotation)> {
     for tile_1_edge in [Edge::Top, Edge::Bottom, Edge::Right, Edge::Left] {
-        let tile_1_edge = get_edge(tile_1, &tile_1_edge, &Rotation::Zero);
+        let tile_1_edge_indices = get_edge(tile_1, &tile_1_edge, tile_1_rotation);
 
         for tile_2_edge in [Edge::Top, Edge::Bottom, Edge::Right, Edge::Left] {
             for tile_2_rotation in [
@@ -117,45 +121,70 @@ pub fn tiles_match(tile_1: &Tile, tile_2: &Tile) -> bool {
                 Rotation::OneEighty,
                 Rotation::TwoSeventy,
             ] {
-                let tile_2_edge = get_edge(tile_2, &tile_2_edge, &tile_2_rotation);
+                let tile_2_edge_indices = get_edge(tile_2, &tile_2_edge, &tile_2_rotation);
 
-                if tile_1_edge == tile_2_edge {
-                    return true;
+                if tile_1_edge_indices == tile_2_edge_indices {
+                    return Some((tile_1_edge, tile_2_edge, tile_2_rotation));
                 }
             }
         }
     }
 
-    false
+    None
+}
+
+struct PuzzlePieces {
+    corners: HashMap<isize, Vec<isize>>,
+    edges: HashMap<isize, Vec<isize>>,
+    insides: HashMap<isize, Vec<isize>>,
+}
+
+fn categorize_tiles(tiles: &[Tile]) -> PuzzlePieces {
+    let mut corners: HashMap<isize, Vec<isize>> = HashMap::new();
+    let mut edges: HashMap<isize, Vec<isize>> = HashMap::new();
+    let mut insides: HashMap<isize, Vec<isize>> = HashMap::new();
+
+    for tile_1 in tiles.iter() {
+        let matching_tiles: Vec<isize> = tiles
+            .iter()
+            .filter(|tile_2| tile_1.0 != tile_2.0)
+            .filter_map(|tile_2| tiles_match(tile_1, &Rotation::Zero, tile_2).map(|_| tile_2.0))
+            .collect();
+
+        println!(
+            "Tile {} has {} matching tiles",
+            tile_1.0,
+            matching_tiles.len()
+        );
+
+        match matching_tiles.len() {
+            2 => corners.insert(tile_1.0, matching_tiles),
+            3 => edges.insert(tile_1.0, matching_tiles),
+            4 => insides.insert(tile_1.0, matching_tiles),
+            _ => panic!("The data or the algorithm is faulty."),
+        };
+    }
+
+    PuzzlePieces {
+        corners,
+        edges,
+        insides,
+    }
 }
 
 pub fn part_1(file_path: String) -> i64 {
     let tiles = parse_data(file_path);
-    println!("{tiles:?}");
 
-    let frame_size = (tiles.len() as f64).sqrt().round() as i32;
-    println!("{frame_size:?}");
+    let puzzle_size = (tiles.len() as f64).sqrt().round() as i32;
+    println!("{puzzle_size:?}");
 
-    let mut corner_pieces_maybe = vec![];
+    let puzzle_pieces = categorize_tiles(&tiles);
 
-    for tile_1 in tiles.iter() {
-        let matching_tiles = tiles
-            .iter()
-            .filter(|tile_2| tiles_match(tile_1, tile_2))
-            .count();
-
-        println!("Tile {} has {matching_tiles} matching tiles", tile_1.0);
-
-        if matching_tiles == 3 {
-            corner_pieces_maybe.push(tile_1.0)
-        }
-    }
-
-    if corner_pieces_maybe.len() != 4 {
+    if puzzle_pieces.corners.len() != 4 {
         panic!("Your algorithm is faulty, you're making wrong assumptions.");
     }
 
-    corner_pieces_maybe.into_iter().map(|i| i as i64).product()
+    puzzle_pieces.corners.keys().map(|i| *i as i64).product()
 }
 
 pub fn part_2(file_path: String) -> i64 {
