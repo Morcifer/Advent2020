@@ -1,7 +1,8 @@
+use std::collections::VecDeque;
 use itertools::Itertools;
 
 use crate::utilities::file_utilities::read_lines;
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashSet, FxHashMap};
 
 type Tile = (isize, Vec<(isize, isize)>);
 
@@ -12,7 +13,9 @@ enum Edge {
     Left,
 }
 
+#[derive(Clone, Debug, Default)]
 enum Rotation {
+    #[default]
     Zero,
     Ninety,
     OneEighty,
@@ -53,7 +56,7 @@ fn parse_data(file_path: String) -> Vec<Tile> {
         .collect()
 }
 
-fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> HashSet<isize> {
+fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> FxHashSet<isize> {
     let (filter_row, filter_column, flip) = match (edge, rotation) {
         (Edge::Top, Rotation::Zero) => (Some(0), None, false),
         (Edge::Top, Rotation::Ninety) => (None, Some(0), true),
@@ -84,7 +87,7 @@ fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> HashSet<isize> {
                     None
                 }
             })
-            .collect::<HashSet<_>>(),
+            .collect::<FxHashSet<_>>(),
         (None, Some(filter_column)) => tile
             .1
             .iter()
@@ -95,7 +98,7 @@ fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> HashSet<isize> {
                     None
                 }
             })
-            .collect::<HashSet<_>>(),
+            .collect::<FxHashSet<_>>(),
         _ => panic!("How did you manage to do that?"),
     };
 
@@ -134,15 +137,15 @@ fn tiles_match(
 }
 
 struct PuzzlePieces {
-    corners: HashMap<isize, Vec<isize>>,
-    edges: HashMap<isize, Vec<isize>>,
-    insides: HashMap<isize, Vec<isize>>,
+    corners: FxHashMap<isize, Vec<isize>>,
+    edges: FxHashMap<isize, Vec<isize>>,
+    insides: FxHashMap<isize, Vec<isize>>,
 }
 
 fn categorize_tiles(tiles: &[Tile]) -> PuzzlePieces {
-    let mut corners: HashMap<isize, Vec<isize>> = HashMap::new();
-    let mut edges: HashMap<isize, Vec<isize>> = HashMap::new();
-    let mut insides: HashMap<isize, Vec<isize>> = HashMap::new();
+    let mut corners: FxHashMap<isize, Vec<isize>> = FxHashMap::default();
+    let mut edges: FxHashMap<isize, Vec<isize>> = FxHashMap::default();
+    let mut insides: FxHashMap<isize, Vec<isize>> = FxHashMap::default();
 
     for tile_1 in tiles.iter() {
         let matching_tiles: Vec<isize> = tiles
@@ -189,6 +192,72 @@ pub fn part_1(file_path: String) -> i64 {
 
 pub fn part_2(file_path: String) -> i64 {
     // Now we get to the good part.
+    let tiles = parse_data(file_path);
+    let puzzle_pieces = categorize_tiles(&tiles);
+
+    let puzzle_size = (tiles.len() as f64).sqrt().round() as usize;
+    println!("{puzzle_size:?}");
+
+    let mut pieces: Vec<Vec<isize>> = vec![vec![Default::default(); puzzle_size]; puzzle_size];
+
+    let all_edges_and_corners_pieces = puzzle_pieces.corners.iter()
+        .chain(puzzle_pieces.edges.iter())
+        .collect::<FxHashMap<_, _>>();
+
+    let all_neighbours = puzzle_pieces.corners.iter()
+        .chain(puzzle_pieces.edges.iter())
+        .chain(puzzle_pieces.insides.iter())
+        .collect::<FxHashMap<_, _>>();
+
+    println!("{all_neighbours:?}");
+
+    // Start with the top.
+    let first_corner = *puzzle_pieces.corners.keys().next().unwrap();
+    let first_corner_friends = puzzle_pieces.corners.get(&first_corner).unwrap().iter().copied().collect::<Vec<_>>();
+    let first_first_corner_friend = first_corner_friends[0];
+
+    pieces[0][0] = first_corner;
+    pieces[0][1] = first_first_corner_friend;
+
+    let mut handled: FxHashSet<isize> = vec![first_corner, first_first_corner_friend].into_iter().collect();
+
+    // Fill up the puzzle from top to bottom, from left to right.
+    for row in 0..puzzle_size {
+        for column in 0..puzzle_size {
+            if row == 0 && column < 2 {
+                continue;
+            }
+
+            let neighbour = if row == 0 {
+                pieces[0][column-1]
+            } else {
+                pieces[row - 1][column]
+            };
+
+            let important_subset = if row == 0 {
+                &all_edges_and_corners_pieces
+            } else {
+                &all_neighbours
+            };
+
+            let next_piece = all_neighbours
+                .get(&neighbour)
+                .unwrap()
+                .iter()
+                .filter(|n| important_subset.contains_key(n) && !handled.contains(&n))
+                .next()
+                .unwrap();
+
+            pieces[row][column] = *next_piece;
+            handled.insert(*next_piece);
+        }
+    }
+
+    // Now look for rotation and construct image.
+
+    println!("{pieces:?}");
+
+    // puzzle_pieces.corners.keys().map(|i| *i as i64).product()
     0
 }
 
