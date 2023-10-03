@@ -2,6 +2,7 @@ use itertools::Itertools;
 
 use crate::utilities::file_utilities::read_lines;
 use rustc_hash::{FxHashMap, FxHashSet};
+use crate::day_20::Pixel::Off;
 
 type Tile = (isize, Vec<Vec<Pixel>>);
 
@@ -29,6 +30,8 @@ enum Rotation {
     Ninety,
     OneEighty,
     TwoSeventy,
+    FlipColumnWise,
+    FlipRowWise,
 }
 
 fn parse_cluster(line: String) -> Tile {
@@ -75,18 +78,26 @@ fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> [Pixel; TILE_SIZE]
         (Edge::Top, Rotation::Ninety) => (None, Some(0), true),
         (Edge::Top, Rotation::OneEighty) => (Some(9), None, true),
         (Edge::Top, Rotation::TwoSeventy) => (None, Some(9), false),
+        (Edge::Top, Rotation::FlipRowWise) => (Some(9), None, false),
+        (Edge::Top, Rotation::FlipColumnWise) => (Some(0), None, true),
         (Edge::Bottom, Rotation::Zero) => (Some(9), None, false),
         (Edge::Bottom, Rotation::Ninety) => (None, Some(9), true),
         (Edge::Bottom, Rotation::OneEighty) => (Some(0), None, true),
         (Edge::Bottom, Rotation::TwoSeventy) => (None, Some(0), false),
+        (Edge::Bottom, Rotation::FlipRowWise) => (Some(0), None, false),
+        (Edge::Bottom, Rotation::FlipColumnWise) => (Some(9), None, true),
         (Edge::Right, Rotation::Zero) => (None, Some(0), false),
         (Edge::Right, Rotation::Ninety) => (Some(0), None, false),
         (Edge::Right, Rotation::OneEighty) => (None, Some(9), true),
         (Edge::Right, Rotation::TwoSeventy) => (Some(9), None, true),
+        (Edge::Right, Rotation::FlipRowWise) => (None, Some(0), true),
+        (Edge::Right, Rotation::FlipColumnWise) => (None, Some(9), false),
         (Edge::Left, Rotation::Zero) => (None, Some(9), false),
         (Edge::Left, Rotation::Ninety) => (Some(9), None, false),
         (Edge::Left, Rotation::OneEighty) => (None, Some(0), true),
         (Edge::Left, Rotation::TwoSeventy) => (Some(0), None, true),
+        (Edge::Left, Rotation::FlipRowWise) => (None, Some(9), true),
+        (Edge::Left, Rotation::FlipColumnWise) => (None, Some(0), false),
     };
 
     let non_flipped: Vec<Pixel> = match (filter_row, filter_column) {
@@ -127,6 +138,8 @@ fn tiles_match(
                 Rotation::Ninety,
                 Rotation::OneEighty,
                 Rotation::TwoSeventy,
+                Rotation::FlipColumnWise,
+                Rotation::FlipRowWise,
             ] {
                 let tile_2_edge_indices = get_edge(tile_2, &tile_2_edge, &tile_2_rotation);
 
@@ -234,6 +247,8 @@ pub fn part_2(file_path: String) -> i64 {
                 Rotation::Ninety,
                 Rotation::OneEighty,
                 Rotation::TwoSeventy,
+                Rotation::FlipColumnWise,
+                Rotation::FlipRowWise,
             ]
             .iter()
             .map(|rotation| {
@@ -348,6 +363,8 @@ pub fn part_2(file_path: String) -> i64 {
                             TILE_SIZE - tile_pixel_column - 1,
                         ),
                         Rotation::TwoSeventy => (tile_pixel_column, TILE_SIZE - tile_pixel_row - 1),
+                        Rotation::FlipColumnWise => (tile_pixel_row, TILE_SIZE - tile_pixel_column - 1),
+                        Rotation::FlipRowWise => (TILE_SIZE - tile_pixel_row - 1, tile_pixel_column),
                     };
 
                     // println!("Tile: {tile_row}, {tile_column}");
@@ -379,9 +396,39 @@ pub fn part_2(file_path: String) -> i64 {
         println!("{print:?}");
     }
 
-    // println!("{picture_pixels:?}");
-    // puzzle_pieces.corners.keys().map(|i| *i as i64).product()
-    0
+    let mut monsters = 0;
+    let monster_offsets = [
+        (0, 18),
+        (1, 5),
+        (1, 6),
+        (1, 11),
+        (1, 12),
+        (1, 17),
+        (1, 18),
+        (1, 19),
+        (2, 1),
+        (2, 4),
+        (2, 7),
+        (2, 10),
+        (2, 13),
+        (2, 16),
+    ];
+
+    for row_index in 0..whole_picture_size-3 {
+        for column_index in 0..whole_picture_size-20 {
+            let fits_monster = monster_offsets
+                .iter()
+                .all(|(row_offset, column_offset)| {
+                    picture_pixels[row_offset+row_index][column_offset+column_index] == Pixel::On
+                });
+
+            if fits_monster {
+                monsters += 1;
+            }
+        }
+    }
+
+    monsters
 }
 
 #[cfg(test)]
