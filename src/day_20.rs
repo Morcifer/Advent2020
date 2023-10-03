@@ -1,10 +1,18 @@
-use std::collections::VecDeque;
 use itertools::Itertools;
 
 use crate::utilities::file_utilities::read_lines;
-use rustc_hash::{FxHashSet, FxHashMap};
+use rustc_hash::{FxHashMap, FxHashSet};
 
-type Tile = (isize, Vec<(isize, isize)>);
+type Tile = (isize, Vec<Vec<Pixel>>);
+
+const TILE_SIZE: usize = 10;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+enum Pixel {
+    On,
+    #[default]
+    Off,
+}
 
 enum Edge {
     Top,
@@ -28,17 +36,21 @@ fn parse_cluster(line: String) -> Tile {
     let tile_data = &cluster[2..];
     // println!("{tile_data:?}");
 
-    let mut on_pixels: Vec<(isize, isize)> = vec![];
+    let mut pixels: Vec<Vec<Pixel>> = vec![vec![Default::default(); TILE_SIZE]; TILE_SIZE];
+
     for (i, row) in tile_data.iter().enumerate() {
         for (j, char) in row.chars().enumerate() {
-            if char == '#' {
-                on_pixels.push((i as isize, j as isize));
-            }
+            let pixel = match char {
+                '#' => Pixel::On,
+                '.' => Pixel::Off,
+                _ => panic!("Something's wrong with this pixel"),
+            };
+            pixels[i][j] = pixel;
         }
     }
     // println!("{on_pixels:?}");
 
-    (tile_id, on_pixels)
+    (tile_id, pixels)
 }
 
 fn parse_data(file_path: String) -> Vec<Tile> {
@@ -56,7 +68,7 @@ fn parse_data(file_path: String) -> Vec<Tile> {
         .collect()
 }
 
-fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> FxHashSet<isize> {
+fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> [Pixel; TILE_SIZE] {
     let (filter_row, filter_column, flip) = match (edge, rotation) {
         (Edge::Top, Rotation::Zero) => (Some(0), None, false),
         (Edge::Top, Rotation::Ninety) => (None, Some(0), true),
@@ -76,36 +88,27 @@ fn get_edge(tile: &Tile, edge: &Edge, rotation: &Rotation) -> FxHashSet<isize> {
         (Edge::Left, Rotation::TwoSeventy) => (Some(0), None, true),
     };
 
-    let non_flipped = match (filter_row, filter_column) {
-        (Some(filter_row), None) => tile
-            .1
-            .iter()
-            .filter_map(|(row_index, column_index)| {
-                if *row_index == filter_row {
-                    Some(column_index)
-                } else {
-                    None
-                }
-            })
-            .collect::<FxHashSet<_>>(),
-        (None, Some(filter_column)) => tile
-            .1
-            .iter()
-            .filter_map(|(row_index, column_index)| {
-                if *column_index == filter_column {
-                    Some(row_index)
-                } else {
-                    None
-                }
-            })
-            .collect::<FxHashSet<_>>(),
+    let non_flipped: Vec<Pixel> = match (filter_row, filter_column) {
+        (Some(filter_row), None) => tile.1[filter_row].to_vec(),
+        (None, Some(filter_column)) => tile.1.iter().map(|row| row[filter_column]).collect(),
         _ => panic!("How did you manage to do that?"),
     };
 
     if flip {
-        non_flipped.into_iter().map(|i| 9 - i).collect()
+        non_flipped
+            .into_iter()
+            .rev()
+            .collect::<Vec<Pixel>>()
+            .as_slice()
+            .try_into()
+            .unwrap()
     } else {
-        non_flipped.into_iter().copied().collect()
+        non_flipped
+            .into_iter()
+            .collect::<Vec<Pixel>>()
+            .as_slice()
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -154,11 +157,11 @@ fn categorize_tiles(tiles: &[Tile]) -> PuzzlePieces {
             .filter_map(|tile_2| tiles_match(tile_1, &Rotation::Zero, tile_2).map(|_| tile_2.0))
             .collect();
 
-        println!(
-            "Tile {} has {} matching tiles",
-            tile_1.0,
-            matching_tiles.len()
-        );
+        // println!(
+        //     "Tile {} has {} matching tiles",
+        //     tile_1.0,
+        //     matching_tiles.len()
+        // );
 
         match matching_tiles.len() {
             2 => corners.insert(tile_1.0, matching_tiles),
@@ -178,9 +181,6 @@ fn categorize_tiles(tiles: &[Tile]) -> PuzzlePieces {
 pub fn part_1(file_path: String) -> i64 {
     let tiles = parse_data(file_path);
 
-    let puzzle_size = (tiles.len() as f64).sqrt().round() as i32;
-    println!("{puzzle_size:?}");
-
     let puzzle_pieces = categorize_tiles(&tiles);
 
     if puzzle_pieces.corners.len() != 4 {
@@ -196,30 +196,36 @@ pub fn part_2(file_path: String) -> i64 {
     let puzzle_pieces = categorize_tiles(&tiles);
 
     let puzzle_size = (tiles.len() as f64).sqrt().round() as usize;
-    println!("{puzzle_size:?}");
+    // println!("{puzzle_size:?}");
 
     let mut pieces: Vec<Vec<isize>> = vec![vec![Default::default(); puzzle_size]; puzzle_size];
 
-    let all_edges_and_corners_pieces = puzzle_pieces.corners.iter()
+    let all_edges_and_corners_pieces = puzzle_pieces
+        .corners
+        .iter()
         .chain(puzzle_pieces.edges.iter())
         .collect::<FxHashMap<_, _>>();
 
-    let all_neighbours = puzzle_pieces.corners.iter()
+    let all_neighbours = puzzle_pieces
+        .corners
+        .iter()
         .chain(puzzle_pieces.edges.iter())
         .chain(puzzle_pieces.insides.iter())
         .collect::<FxHashMap<_, _>>();
 
-    println!("{all_neighbours:?}");
+    // println!("{all_neighbours:?}");
 
     // Start with the top.
     let first_corner = *puzzle_pieces.corners.keys().next().unwrap();
-    let first_corner_friends = puzzle_pieces.corners.get(&first_corner).unwrap().iter().copied().collect::<Vec<_>>();
+    let first_corner_friends = puzzle_pieces.corners.get(&first_corner).unwrap().to_vec();
     let first_first_corner_friend = first_corner_friends[0];
 
     pieces[0][0] = first_corner;
     pieces[0][1] = first_first_corner_friend;
 
-    let mut handled: FxHashSet<isize> = vec![first_corner, first_first_corner_friend].into_iter().collect();
+    let mut handled: FxHashSet<isize> = vec![first_corner, first_first_corner_friend]
+        .into_iter()
+        .collect();
 
     // Fill up the puzzle from top to bottom, from left to right.
     for row in 0..puzzle_size {
@@ -229,7 +235,7 @@ pub fn part_2(file_path: String) -> i64 {
             }
 
             let neighbour = if row == 0 {
-                pieces[0][column-1]
+                pieces[0][column - 1]
             } else {
                 pieces[row - 1][column]
             };
@@ -244,8 +250,7 @@ pub fn part_2(file_path: String) -> i64 {
                 .get(&neighbour)
                 .unwrap()
                 .iter()
-                .filter(|n| important_subset.contains_key(n) && !handled.contains(&n))
-                .next()
+                .find(|n| important_subset.contains_key(n) && !handled.contains(n))
                 .unwrap();
 
             pieces[row][column] = *next_piece;
