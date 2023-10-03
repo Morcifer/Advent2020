@@ -14,6 +14,7 @@ enum Pixel {
     Off,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum Edge {
     Top,
     Bottom,
@@ -21,7 +22,7 @@ enum Edge {
     Left,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 enum Rotation {
     #[default]
     Zero,
@@ -193,12 +194,16 @@ pub fn part_1(file_path: String) -> i64 {
 pub fn part_2(file_path: String) -> i64 {
     // Now we get to the good part.
     let tiles = parse_data(file_path);
+    let tiles_by_id: FxHashMap<isize, &Tile> = tiles.iter().map(|tile| (tile.0, tile)).collect();
+
     let puzzle_pieces = categorize_tiles(&tiles);
 
     let puzzle_size = (tiles.len() as f64).sqrt().round() as usize;
     // println!("{puzzle_size:?}");
 
     let mut pieces: Vec<Vec<isize>> = vec![vec![Default::default(); puzzle_size]; puzzle_size];
+    let mut rotations: Vec<Vec<Rotation>> =
+        vec![vec![Default::default(); puzzle_size]; puzzle_size];
 
     let all_edges_and_corners_pieces = puzzle_pieces
         .corners
@@ -215,13 +220,62 @@ pub fn part_2(file_path: String) -> i64 {
 
     // println!("{all_neighbours:?}");
 
-    // Start with the top.
-    let first_corner = *puzzle_pieces.corners.keys().next().unwrap();
+    // Start with the top left corner -
+    // the one that has some rotation in which it has a bottom edge and right edge neighbour...
+    let all_corners = puzzle_pieces.corners.keys().collect::<Vec<_>>();
+    println!("{all_corners:?}");
+
+    let (first_corner, first_corner_rotation) = all_corners
+        .iter()
+        .flat_map(|corner| {
+            let friends = puzzle_pieces.corners.get(corner).unwrap().to_vec();
+            [
+                Rotation::Zero,
+                Rotation::Ninety,
+                Rotation::OneEighty,
+                Rotation::TwoSeventy,
+            ]
+            .iter()
+            .map(|rotation| {
+                let matching_edges = friends
+                    .iter()
+                    .map(|friend| {
+                        tiles_match(
+                            tiles_by_id.get(corner).unwrap(),
+                            rotation,
+                            tiles_by_id.get(friend).unwrap(),
+                        )
+                        .unwrap()
+                        .0
+                    })
+                    .collect::<Vec<_>>();
+
+                // println!("Corner {corner} with rotation {rotation:?} - {matching_edges:?}");
+                (**corner, rotation, matching_edges)
+            })
+            .collect::<Vec<_>>()
+        })
+        .filter(|(_, _, matching_edges)| {
+            *matching_edges == [Edge::Bottom, Edge::Right]
+                || *matching_edges == [Edge::Right, Edge::Bottom]
+        })
+        .map(|(corner, rotation, _)| (corner, *rotation))
+        .next()
+        .unwrap();
+
     let first_corner_friends = puzzle_pieces.corners.get(&first_corner).unwrap().to_vec();
     let first_first_corner_friend = first_corner_friends[0];
 
     pieces[0][0] = first_corner;
+    rotations[0][0] = first_corner_rotation;
     pieces[0][1] = first_first_corner_friend;
+    rotations[0][1] = tiles_match(
+        tiles_by_id.get(&first_corner).unwrap(),
+        &rotations[0][0],
+        tiles_by_id.get(&pieces[0][1]).unwrap(),
+    )
+    .unwrap()
+    .2;
 
     let mut handled: FxHashSet<isize> = vec![first_corner, first_first_corner_friend]
         .into_iter()
@@ -234,10 +288,10 @@ pub fn part_2(file_path: String) -> i64 {
                 continue;
             }
 
-            let neighbour = if row == 0 {
-                pieces[0][column - 1]
+            let (neighbour_tile_id, neighbour_tile_rotation) = if row == 0 {
+                (pieces[0][column - 1], rotations[0][column - 1])
             } else {
-                pieces[row - 1][column]
+                (pieces[row - 1][column], rotations[row - 1][column])
             };
 
             let important_subset = if row == 0 {
@@ -247,21 +301,85 @@ pub fn part_2(file_path: String) -> i64 {
             };
 
             let next_piece = all_neighbours
-                .get(&neighbour)
+                .get(&neighbour_tile_id)
                 .unwrap()
                 .iter()
                 .find(|n| important_subset.contains_key(n) && !handled.contains(n))
                 .unwrap();
 
             pieces[row][column] = *next_piece;
+            rotations[row][column] = tiles_match(
+                tiles_by_id.get(&neighbour_tile_id).unwrap(),
+                &neighbour_tile_rotation,
+                tiles_by_id.get(&pieces[row][column]).unwrap(),
+            )
+            .unwrap()
+            .2;
+
             handled.insert(*next_piece);
         }
     }
 
     // Now look for rotation and construct image.
+    let whole_picture_size = puzzle_size * (TILE_SIZE - 2);
+    let mut picture_pixels: Vec<Vec<Pixel>> =
+        vec![vec![Default::default(); whole_picture_size]; whole_picture_size];
 
     println!("{pieces:?}");
+    println!("{rotations:?}");
 
+    let inner_tile_size = TILE_SIZE - 2;
+
+    for tile_row in 0..puzzle_size {
+        for tile_column in 0..puzzle_size {
+            let tile_id = pieces[tile_row][tile_column];
+            let tile_rotation = rotations[tile_row][tile_column];
+            let tile_pixes = tiles_by_id.get(&tile_id).unwrap();
+
+            for pixel_row in 0..inner_tile_size {
+                for pixel_column in 0..inner_tile_size {
+                    let (tile_pixel_row, tile_pixel_column) = (pixel_row + 1, pixel_column + 1);
+
+                    let (tile_pixel_row, tile_pixel_column) = match tile_rotation {
+                        Rotation::Zero => (tile_pixel_row, tile_pixel_column),
+                        Rotation::Ninety => (TILE_SIZE - tile_pixel_column - 1, tile_pixel_row),
+                        Rotation::OneEighty => (
+                            TILE_SIZE - tile_pixel_row - 1,
+                            TILE_SIZE - tile_pixel_column - 1,
+                        ),
+                        Rotation::TwoSeventy => (tile_pixel_column, TILE_SIZE - tile_pixel_row - 1),
+                    };
+
+                    // println!("Tile: {tile_row}, {tile_column}");
+                    // println!("Pixel: {pixel_row}, {pixel_column}");
+                    // println!("Tile Pixel: {tile_pixel_row}, {tile_pixel_column}");
+                    // println!("Location in total: {}, {}", tile_row*inner_tile_size + pixel_row, tile_column*inner_tile_size + pixel_column);
+
+                    picture_pixels[tile_row * inner_tile_size + pixel_row]
+                        [tile_column * inner_tile_size + pixel_column] =
+                        tile_pixes.1[tile_pixel_row][tile_pixel_column];
+                }
+            }
+        }
+    }
+
+    // println!("{picture_pixels:?}");
+
+    for row in picture_pixels.iter() {
+        let print = row
+            .iter()
+            .map(|pixel| {
+                if *pixel == Pixel::Off {
+                    ".".to_string()
+                } else {
+                    "#".to_string()
+                }
+            })
+            .join("");
+        println!("{print:?}");
+    }
+
+    // println!("{picture_pixels:?}");
     // puzzle_pieces.corners.keys().map(|i| *i as i64).product()
     0
 }
