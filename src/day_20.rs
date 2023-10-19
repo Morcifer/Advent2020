@@ -45,7 +45,6 @@ fn parse_cluster(line: String) -> Tile {
     let cluster: Vec<&str> = line.split(' ').collect();
     let tile_id = cluster[1][0..4].parse::<isize>().unwrap();
     let tile_data = &cluster[2..];
-    // println!("{tile_data:?}");
 
     let mut pixels: Vec<Vec<Pixel>> = vec![vec![Default::default(); TILE_SIZE]; TILE_SIZE];
 
@@ -59,7 +58,6 @@ fn parse_cluster(line: String) -> Tile {
             pixels[i][j] = pixel;
         }
     }
-    // println!("{on_pixels:?}");
 
     (tile_id, pixels)
 }
@@ -130,32 +128,34 @@ fn tiles_match(
     tile_1: &Tile,
     tile_1_orientation: &Orientation,
     tile_2: &Tile,
-    preferred_tile_1_edge: Option<&Edge>,
-    preferred_tile_2_edge: Option<&Edge>,
+    preferred_tiles_edges: Option<(&Edge, &Edge)>,
 ) -> Option<(Edge, Edge, Orientation)> {
-    for tile_1_edge in [Edge::Top, Edge::Bottom, Edge::Right, Edge::Left] {
-        let tile_1_edge = preferred_tile_1_edge.unwrap_or(&tile_1_edge);
+    let edge_options = if let Some((edge_1, edge_2)) = preferred_tiles_edges {
+        [(edge_1, edge_2)].to_vec()
+    } else {
+        [Edge::Top, Edge::Bottom, Edge::Right, Edge::Left]
+            .iter()
+            .cartesian_product([Edge::Top, Edge::Bottom, Edge::Right, Edge::Left].iter())
+            .collect::<Vec<_>>()
+    };
+
+    for (tile_1_edge, tile_2_edge) in edge_options.iter() {
         let tile_1_edge_indices = get_edge(tile_1, tile_1_edge, tile_1_orientation);
 
-        for tile_2_edge in [Edge::Top, Edge::Bottom, Edge::Right, Edge::Left] {
-            let tile_2_edge = preferred_tile_2_edge.unwrap_or(&tile_2_edge);
+        let rotations = [
+            Rotation::Zero,
+            Rotation::Ninety,
+            Rotation::OneEighty,
+            Rotation::TwoSeventy,
+        ];
+        let flips = [Flip::No, Flip::RowWise, Flip::ColumnWise];
 
-            let rotations = [
-                Rotation::Zero,
-                Rotation::Ninety,
-                Rotation::OneEighty,
-                Rotation::TwoSeventy,
-            ];
-            let flips = [Flip::No, Flip::RowWise, Flip::ColumnWise];
+        for tile_2_orientation in rotations.iter().cartesian_product(flips.iter()) {
+            let tile_2_orientation = (*tile_2_orientation.0, *tile_2_orientation.1);
+            let tile_2_edge_indices = get_edge(tile_2, tile_2_edge, &tile_2_orientation);
 
-            for tile_2_orientation in rotations.iter().cartesian_product(flips.iter()) {
-                let tile_2_orientation = (*tile_2_orientation.0, *tile_2_orientation.1);
-                let tile_2_edge_indices = get_edge(tile_2, tile_2_edge, &tile_2_orientation);
-
-                // Am I choosing the easy way out, and should actually get multiple of these?
-                if tile_1_edge_indices == tile_2_edge_indices {
-                    return Some((*tile_1_edge, *tile_2_edge, tile_2_orientation));
-                }
+            if tile_1_edge_indices == tile_2_edge_indices {
+                return Some((**tile_1_edge, **tile_2_edge, tile_2_orientation));
             }
         }
     }
@@ -179,16 +179,9 @@ fn categorize_tiles(tiles: &[Tile]) -> PuzzlePieces {
             .iter()
             .filter(|tile_2| tile_1.0 != tile_2.0)
             .filter_map(|tile_2| {
-                tiles_match(tile_1, &(Rotation::Zero, Flip::No), tile_2, None, None)
-                    .map(|_| tile_2.0)
+                tiles_match(tile_1, &(Rotation::Zero, Flip::No), tile_2, None).map(|_| tile_2.0)
             })
             .collect();
-
-        // println!(
-        //     "Tile {} has {} matching tiles",
-        //     tile_1.0,
-        //     matching_tiles.len()
-        // );
 
         match matching_tiles.len() {
             2 => corners.insert(tile_1.0, matching_tiles),
@@ -237,12 +230,8 @@ pub fn part_2(file_path: String) -> i64 {
         .chain(puzzle_pieces.insides.iter())
         .collect::<FxHashMap<_, _>>();
 
-    // println!("{all_neighbours:?}");
-
-    // Start with the top left corner -
-    // the one that has some rotation in which it has a bottom edge and right edge neighbour...
+    // For every corner, start with it in all orientations, and give up when/if the puzzle doesn't add up.
     let all_corners = puzzle_pieces.corners.keys().collect::<Vec<_>>();
-    // println!("{all_corners:?}");
 
     for first_corner in all_corners.iter() {
         let rotations = [
@@ -270,8 +259,7 @@ pub fn part_2(file_path: String) -> i64 {
                         tiles_by_id.get(first_corner).unwrap(),
                         &first_corner_rotation,
                         tiles_by_id.get(friend).unwrap(),
-                        Some(&Edge::Right),
-                        Some(&Edge::Left),
+                        Some((&Edge::Right, &Edge::Left)),
                     );
 
                     matching.map(|matching| (friend, matching.0, matching.1, matching.2))
@@ -317,15 +305,15 @@ pub fn part_2(file_path: String) -> i64 {
                             (
                                 pieces[0][column - 1],
                                 orientations[0][column - 1],
-                                Some(&Edge::Right),
-                                Some(&Edge::Left),
+                                &Edge::Right,
+                                &Edge::Left,
                             )
                         } else {
                             (
                                 pieces[row - 1][column],
                                 orientations[row - 1][column],
-                                Some(&Edge::Bottom),
-                                Some(&Edge::Top),
+                                &Edge::Bottom,
+                                &Edge::Top,
                             )
                         };
 
@@ -345,8 +333,7 @@ pub fn part_2(file_path: String) -> i64 {
                                 tiles_by_id.get(&neighbour_tile_id).unwrap(),
                                 &neighbour_tile_rotation,
                                 tiles_by_id.get(piece).unwrap(),
-                                tile_edge,
-                                neighbour_edge,
+                                Some((tile_edge, neighbour_edge)),
                             );
 
                             tile_match.map(|tile_match| (piece, tile_match.2))
