@@ -242,7 +242,9 @@ pub fn part_2(file_path: String) -> i64 {
         ];
         let flips = [Flip::No, Flip::RowWise, Flip::ColumnWise];
 
-        for first_corner_rotation in rotations.iter().cartesian_product(flips.iter()) {
+        'orientation_loop: for first_corner_rotation in
+            rotations.iter().cartesian_product(flips.iter())
+        {
             let mut pieces: Vec<Vec<isize>> =
                 vec![vec![Default::default(); puzzle_size]; puzzle_size];
             let mut orientations: Vec<Vec<Orientation>> =
@@ -252,26 +254,23 @@ pub fn part_2(file_path: String) -> i64 {
             let first_corner_rotation = (*first_corner_rotation.0, *first_corner_rotation.1);
             let first_corner_friends = puzzle_pieces.corners.get(first_corner).unwrap().to_vec();
 
-            let temp = first_corner_friends
-                .iter()
-                .filter_map(|friend| {
-                    let matching = tiles_match(
-                        tiles_by_id.get(first_corner).unwrap(),
-                        &first_corner_rotation,
-                        tiles_by_id.get(friend).unwrap(),
-                        Some((&Edge::Right, &Edge::Left)),
-                    );
+            let Some((first_first_corner_friend, _, _, first_first_corner_friend_rotation)) =
+                first_corner_friends
+                    .iter()
+                    .filter_map(|friend| {
+                        let matching = tiles_match(
+                            tiles_by_id.get(first_corner).unwrap(),
+                            &first_corner_rotation,
+                            tiles_by_id.get(friend).unwrap(),
+                            Some((&Edge::Right, &Edge::Left)),
+                        );
 
-                    matching.map(|matching| (friend, matching.0, matching.1, matching.2))
-                })
-                .next();
-
-            if temp.is_none() {
+                        matching.map(|matching| (friend, matching.0, matching.1, matching.2))
+                    })
+                    .next()
+            else {
                 continue;
-            }
-
-            let (first_first_corner_friend, _, _, first_first_corner_friend_rotation) =
-                temp.unwrap();
+            };
 
             pieces[0][0] = **first_corner;
             orientations[0][0] = first_corner_rotation;
@@ -284,18 +283,8 @@ pub fn part_2(file_path: String) -> i64 {
                 .collect();
 
             // Fill up the puzzle from top to bottom, from left to right.
-            let mut stop_solving = false;
-
             for row in 0..puzzle_size {
-                if stop_solving {
-                    break;
-                }
-
                 for column in 0..puzzle_size {
-                    if stop_solving {
-                        break;
-                    }
-
                     if row == 0 && column < 2 {
                         continue;
                     }
@@ -323,7 +312,7 @@ pub fn part_2(file_path: String) -> i64 {
                         &all_neighbours
                     };
 
-                    let result = all_neighbours
+                    let Some((next_piece, next_piece_orientation)) = all_neighbours
                         .get(&neighbour_tile_id)
                         .unwrap()
                         .iter()
@@ -338,25 +327,16 @@ pub fn part_2(file_path: String) -> i64 {
 
                             tile_match.map(|tile_match| (piece, tile_match.2))
                         })
-                        .next();
-
-                    if result.is_none() {
-                        stop_solving = true;
-                        break;
-                    }
-
-                    let (next_piece, next_piece_orientation) = result.unwrap();
+                        .next()
+                    else {
+                        continue 'orientation_loop;
+                    };
 
                     pieces[row][column] = *next_piece;
                     orientations[row][column] = next_piece_orientation;
 
                     handled.insert(*next_piece);
                 }
-            }
-
-            if stop_solving {
-                // Dead end
-                continue;
             }
 
             // Now look for rotation and construct image.
@@ -381,34 +361,12 @@ pub fn part_2(file_path: String) -> i64 {
                                 pixel_column + 1,
                             );
 
-                            // println!("Tile: {tile_row}, {tile_column}");
-                            // println!("Pixel: {pixel_row}, {pixel_column}");
-                            // println!("Tile Pixel: {tile_pixel_row}, {tile_pixel_column}");
-                            // println!("Location in total: {}, {}", tile_row*inner_tile_size + pixel_row, tile_column*inner_tile_size + pixel_column);
-
                             picture_pixels[tile_row * inner_tile_size + pixel_row]
                                 [tile_column * inner_tile_size + pixel_column] = pixel;
                         }
                     }
                 }
             }
-
-            // println!("{picture_pixels:?}");
-            // if first_corner == 1951 {
-            //     for row in picture_pixels.iter() {
-            //         let print = row
-            //             .iter()
-            //             .map(|pixel| {
-            //                 if *pixel == Pixel::Off {
-            //                     ".".to_string()
-            //                 } else {
-            //                     "#".to_string()
-            //                 }
-            //             })
-            //             .join("");
-            //         println!("{print:?}");
-            //     }
-            // }
 
             let mut monsters = 0;
             let mut monster_pixels = FxHashSet::default();
@@ -447,7 +405,7 @@ pub fn part_2(file_path: String) -> i64 {
                     });
 
                     if fits_monster {
-                        println!("Monster at ({row_index}, {column_index})");
+                        // println!("Monster at ({row_index}, {column_index})");
                         monsters += 1;
 
                         monster_pixels.extend(monster_offsets.iter().map(
@@ -460,24 +418,24 @@ pub fn part_2(file_path: String) -> i64 {
             }
 
             if monsters > 0 {
-                println!("Found monsters in this map:");
+                // println!("Found monsters in this map:");
+                //
+                // println!("{pieces:?}");
+                // println!("{orientations:?}");
 
-                println!("{pieces:?}");
-                println!("{orientations:?}");
-
-                for row in picture_pixels.iter() {
-                    let print = row
-                        .iter()
-                        .map(|pixel| {
-                            if *pixel == Pixel::Off {
-                                ".".to_string()
-                            } else {
-                                "#".to_string()
-                            }
-                        })
-                        .join("");
-                    println!("{print:?}");
-                }
+                // for row in picture_pixels.iter() {
+                //     let print = row
+                //         .iter()
+                //         .map(|pixel| {
+                //             if *pixel == Pixel::Off {
+                //                 ".".to_string()
+                //             } else {
+                //                 "#".to_string()
+                //             }
+                //         })
+                //         .join("");
+                //     println!("{print:?}");
+                // }
 
                 // Don't figure out monsters. Figure out #'s without monsters, you idiot!!
                 let hashtag_total: usize = picture_pixels
