@@ -341,10 +341,6 @@ pub fn part_2(file_path: String) -> i64 {
                         .iter()
                         .filter(|n| important_subset.contains_key(n) && !handled.contains(n))
                         .filter_map(|piece| {
-                            println!(
-                                "{row}, {column}, {:?}, {:?}, {:?}",
-                                pieces[row][column], pieces, piece
-                            );
                             let tile_match = tiles_match(
                                 tiles_by_id.get(&neighbour_tile_id).unwrap(),
                                 &neighbour_tile_rotation,
@@ -428,6 +424,7 @@ pub fn part_2(file_path: String) -> i64 {
             // }
 
             let mut monsters = 0;
+            let mut monster_pixels = FxHashSet::default();
             let monster_offsets = [
                 (0, 18),
                 (1, 0),
@@ -465,6 +462,12 @@ pub fn part_2(file_path: String) -> i64 {
                     if fits_monster {
                         println!("Monster at ({row_index}, {column_index})");
                         monsters += 1;
+
+                        monster_pixels.extend(monster_offsets.iter().map(
+                            |(row_offset, column_offset)| {
+                                (row_offset + row_index, column_offset + column_index)
+                            },
+                        ));
                     }
                 }
             }
@@ -489,7 +492,13 @@ pub fn part_2(file_path: String) -> i64 {
                     println!("{print:?}");
                 }
 
-                return monsters;
+                // Don't figure out monsters. Figure out #'s without monsters, you idiot!!
+                let hashtag_total: usize = picture_pixels
+                    .iter()
+                    .map(|row| row.iter().filter(|pixel| **pixel == Pixel::On).count())
+                    .sum();
+                let hashtag_monster = monster_pixels.len();
+                return (hashtag_total - hashtag_monster) as i64;
             }
         }
     }
@@ -513,8 +522,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case(true, 2)]
-    #[case(false, 24)]
+    #[case(true, 273)]
+    #[case(false, 1841)]
     fn test_part_2(#[case] is_test: bool, #[case] expected: i64) {
         assert_eq!(expected, part_2(get_file_path(is_test, 20, None)));
     }

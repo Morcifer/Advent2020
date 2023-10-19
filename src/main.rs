@@ -46,7 +46,7 @@ use crate::utilities::file_utilities::get_file_path;
 
 fn main() {
     let day = 20;
-    let is_test = true;
+    let is_test = false;
 
     println!(
         "Day {day} Part 1: {}",
