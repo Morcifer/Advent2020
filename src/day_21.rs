@@ -1,6 +1,6 @@
 use crate::utilities::file_utilities::read_lines;
 
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 fn parse_line(line: &str) -> (Vec<String>, Vec<String>) {
     let split_line: Vec<&str> = line
@@ -33,13 +33,12 @@ fn parse_data(file_path: String) -> Vec<(Vec<String>, Vec<String>)> {
         .collect()
 }
 
-pub fn part_1(file_path: String) -> i64 {
-    let foods = parse_data(file_path);
-
-    let all_ingredients: FxHashSet<String> = foods.iter().flat_map(|food| food.0.clone()).collect();
-    let all_allergens: FxHashSet<String> = foods.iter().flat_map(|food| food.1.clone()).collect();
-
-    let mut ingredients_with_allergens = FxHashSet::default();
+fn get_allergens_mapping(
+    foods: &[(Vec<String>, Vec<String>)],
+    all_ingredients: &FxHashSet<String>,
+    all_allergens: &FxHashSet<String>,
+) -> FxHashMap<String, String> {
+    let mut ingredients_to_allergens_result = FxHashMap::default();
 
     let mut unknown_ingredients_remaining = all_ingredients.clone();
     let mut unknown_allergens_remaining = all_allergens.clone();
@@ -74,7 +73,8 @@ pub fn part_1(file_path: String) -> i64 {
                 1 => {
                     let ingredient_in_common = *ingredients_in_common.first().unwrap();
 
-                    ingredients_with_allergens.insert(ingredient_in_common.clone());
+                    ingredients_to_allergens_result
+                        .insert(ingredient_in_common.clone(), allergen.clone());
                     unknown_allergens_remaining.remove(allergen);
                     unknown_ingredients_remaining.remove(&ingredient_in_common.clone());
                     break;
@@ -83,6 +83,21 @@ pub fn part_1(file_path: String) -> i64 {
             }
         }
     }
+
+    ingredients_to_allergens_result
+}
+
+pub fn part_1(file_path: String) -> i64 {
+    let foods = parse_data(file_path);
+
+    let all_ingredients: FxHashSet<String> = foods.iter().flat_map(|food| food.0.clone()).collect();
+    let all_allergens: FxHashSet<String> = foods.iter().flat_map(|food| food.1.clone()).collect();
+
+    let ingredients_with_allergens: FxHashSet<String> =
+        get_allergens_mapping(&foods, &all_ingredients, &all_allergens)
+            .keys()
+            .cloned()
+            .collect();
 
     let non_allergenic_ingredients: FxHashSet<String> = all_ingredients
         .difference(&ingredients_with_allergens)
