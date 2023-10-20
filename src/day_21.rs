@@ -1,4 +1,5 @@
 use crate::utilities::file_utilities::read_lines;
+use itertools::Itertools;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -113,9 +114,19 @@ pub fn part_1(file_path: String) -> i64 {
         .count() as i64;
 }
 
-pub fn part_2(file_path: String) -> i64 {
-    let input: Vec<String> = read_lines(file_path);
-    0
+pub fn part_2(file_path: String) -> String {
+    let foods = parse_data(file_path);
+
+    let all_ingredients: FxHashSet<String> = foods.iter().flat_map(|food| food.0.clone()).collect();
+    let all_allergens: FxHashSet<String> = foods.iter().flat_map(|food| food.1.clone()).collect();
+
+    let canonical_list = get_allergens_mapping(&foods, &all_ingredients, &all_allergens)
+        .iter()
+        .sorted_by(|kvp_1, kvp_2| kvp_1.1.partial_cmp(kvp_2.1).unwrap())
+        .map(|(key, _)| key)
+        .join(",");
+
+    canonical_list
 }
 
 #[cfg(test)]
@@ -133,9 +144,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case(true, 0)]
-    #[case(false, 0)]
-    fn test_part_2(#[case] is_test: bool, #[case] expected: i64) {
+    #[case(true, "mxmxvkd,sqjhc,fvjkl")]
+    #[case(false, "bjpkhx,nsnqf,snhph,zmfqpn,qrbnjtj,dbhfd,thn,sthnsg")]
+    fn test_part_2(#[case] is_test: bool, #[case] expected: String) {
         assert_eq!(expected, part_2(get_file_path(is_test, 21, None)));
     }
 }
