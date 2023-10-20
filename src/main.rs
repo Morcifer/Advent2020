@@ -23,7 +23,9 @@ mod day_18;
 mod day_19;
 #[cfg(test)]
 mod day_2;
+#[cfg(test)]
 mod day_20;
+mod day_21;
 #[cfg(test)]
 mod day_3;
 #[cfg(test)]
@@ -41,11 +43,11 @@ mod day_9;
 
 mod utilities;
 
-use crate::day_20::{part_1, part_2};
+use crate::day_21::{part_1, part_2};
 use crate::utilities::file_utilities::get_file_path;
 
 fn main() {
-    let day = 20;
+    let day = 21;
     let is_test = false;
 
     println!(
