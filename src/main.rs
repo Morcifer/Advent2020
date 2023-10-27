@@ -27,7 +27,9 @@ mod day_2;
 mod day_20;
 #[cfg(test)]
 mod day_21;
+#[cfg(test)]
 mod day_22;
+mod day_23;
 #[cfg(test)]
 mod day_3;
 #[cfg(test)]
@@ -45,19 +47,21 @@ mod day_9;
 
 mod utilities;
 
-use crate::day_22::{part_1, part_2};
+use crate::day_23::{part_1, part_2};
 use crate::utilities::file_utilities::get_file_path;
 
 fn main() {
-    let day = 22;
-    let is_test = false;
+    let day = 23;
+    let is_test = true;
+
+    let data = if is_test { "389125467" } else { "157623984" };
 
     println!(
         "Day {day} Part 1: {}",
-        part_1(get_file_path(is_test, day, None))
+        part_1(data.to_string()), // get_file_path(is_test, day, None))
     );
     println!(
         "Day {day} Part 2: {}",
-        part_2(get_file_path(is_test, day, None))
+        part_2(data.to_string()), // get_file_path(is_test, day, None))
     );
 }
