@@ -12,6 +12,14 @@ fn get_resulting_cups(right_neighbour: &[usize], max_cup: usize) -> Vec<usize> {
         .collect()
 }
 
+fn decrement_cup_circular(cup: usize, max_cup: usize) -> usize {
+    if cup == 1 {
+        max_cup
+    } else {
+        cup - 1
+    }
+}
+
 fn simulate_moves(cups: &[usize], max_cup: usize, moves_count: usize) -> Vec<usize> {
     let mut right_neighbour: Vec<usize> = (0..=max_cup).map(|_| 0).collect();
 
@@ -39,18 +47,10 @@ fn simulate_moves(cups: &[usize], max_cup: usize, moves_count: usize) -> Vec<usi
 
         // println!("picked up: {picked_up:?}");
 
-        let mut destination_cup = if current_cup != 1 {
-            current_cup - 1
-        } else {
-            max_cup
-        };
+        let mut destination_cup = decrement_cup_circular(current_cup, max_cup);
 
         while picked_up.contains(&destination_cup) {
-            destination_cup = if destination_cup != 1 {
-                destination_cup - 1
-            } else {
-                max_cup
-            };
+            destination_cup = decrement_cup_circular(destination_cup, max_cup);
         }
 
         // println!("destination cup: {destination_cup}");
@@ -93,31 +93,23 @@ pub fn part_2(cups_data: String) -> i64 {
         .collect();
 
     cups.extend(10..=1_000_000);
-    println!(
-        "I have {} cups and the max cup is {}",
-        cups.len(),
-        cups.iter().max().unwrap()
-    );
-    println!(
-        "The cups are: {:?}",
-        cups.iter().take(20).cloned().collect::<Vec<usize>>()
-    );
+    // println!(
+    //     "I have {} cups and the max cup is {}",
+    //     cups.len(),
+    //     cups.iter().max().unwrap()
+    // );
+    // println!(
+    //     "The cups are: {:?} ...",
+    //     cups.iter().take(20).cloned().collect::<Vec<usize>>()
+    // );
 
     let moved_cups = simulate_moves(&cups, 1_000_000, 10_000_000);
 
     let one_index = moved_cups.iter().position(|c| *c == 1).unwrap();
-    println!("Index of 1 is {one_index}");
-    println!(
-        "Cups in that region are {:?}",
-        moved_cups
-            .iter()
-            .skip(one_index - 20)
-            .take(21)
-            .cloned()
-            .collect::<Vec<usize>>()
-    );
+    let next_clockwise = if one_index == (1_000_000 - 1) { 0 } else { one_index + 1 };
+    let next_next_clockwise = if next_clockwise == (1_000_000 - 1) { 0 } else { next_clockwise + 1 };
 
-    (moved_cups[one_index - 1] as i64) * (moved_cups[one_index - 2] as i64)
+    (moved_cups[next_clockwise] as i64) * (moved_cups[next_next_clockwise] as i64)
 }
 
 #[cfg(test)]
@@ -134,7 +126,7 @@ mod tests {
 
     #[rstest]
     #[case("389125467", 149245887792)]
-    #[case("157623984", 149245887792)]
+    #[case("157623984", 111057672960)]
     fn test_part_2(#[case] input: String, #[case] expected: i64) {
         assert_eq!(expected, part_2(input));
     }
