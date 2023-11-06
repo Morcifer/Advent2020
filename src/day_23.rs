@@ -1,55 +1,69 @@
 use itertools::Itertools;
 
+fn get_resulting_cups(right_neighbour: &[usize], max_cup: usize) -> Vec<usize> {
+    let mut current_cup = right_neighbour[1];
 
-fn simulate_moves(cups: &Vec<usize>, moves_count: usize) -> Vec<usize> {
-    let mut cups = cups.clone();
+    (0..max_cup)
+        .map(|_| {
+            let output = current_cup;
+            current_cup = right_neighbour[current_cup];
+            output
+        })
+        .collect()
+}
 
-    let mut current_cup_index = 0;
+fn simulate_moves(cups: &[usize], max_cup: usize, moves_count: usize) -> Vec<usize> {
+    let mut right_neighbour: Vec<usize> = (0..=max_cup).map(|_| 0).collect();
+
+    for (prev_cup, current_cup) in cups.iter().tuple_windows() {
+        right_neighbour[*prev_cup] = *current_cup;
+    }
+    right_neighbour[*cups.last().unwrap()] = *cups.first().unwrap(); // Circular
+
+    let mut current_cup = cups[0];
 
     for _move in 1..=moves_count {
         // println!("-- move {_move} --");
-        // println!("cups: {}", cups.iter().join(""));
+        // println!("right_neighbour: {:?}", right_neighbour);
+        // println!("cups: {}", get_resulting_cups(&right_neighbour, max_cup).iter().join(" "));
 
-        let current_cup = cups[current_cup_index];
-        // println!("current cup: {current_cup} at index {current_cup_index}");
-
+        // println!("current cup: {current_cup}");
+        let mut current_for_pickup = current_cup;
         let picked_up: Vec<usize> = (0..3)
             .map(|_| {
-                let mut index_to_remove = current_cup_index + 1;
-                if index_to_remove >= cups.len() {
-                    index_to_remove = 0;
-                }
-                cups.remove(index_to_remove)
+                let clockwise_cup = right_neighbour[current_for_pickup];
+                current_for_pickup = clockwise_cup;
+                clockwise_cup
             })
             .collect();
 
         // println!("picked up: {picked_up:?}");
 
-        let mut destination_cup = if current_cup != 1 { current_cup - 1 } else { 9 };
+        let mut destination_cup = if current_cup != 1 {
+            current_cup - 1
+        } else {
+            max_cup
+        };
+
         while picked_up.contains(&destination_cup) {
             destination_cup = if destination_cup != 1 {
                 destination_cup - 1
             } else {
-                9
+                max_cup
             };
         }
-        let destination_cup_index = cups.iter().position(|c| *c == destination_cup).unwrap();
 
-        // println!("destination cup: {destination_cup} at index {destination_cup_index}");
+        // println!("destination cup: {destination_cup}");
 
-        for cup in picked_up.into_iter().rev() {
-            cups.insert(destination_cup_index + 1, cup)
-        }
+        let destination_cup_right_neighbour = right_neighbour[destination_cup];
+        right_neighbour[destination_cup] = picked_up[0];
+        right_neighbour[current_cup] = right_neighbour[picked_up[2]];
+        right_neighbour[picked_up[2]] = destination_cup_right_neighbour;
 
-        current_cup_index = cups.iter().position(|c| *c == current_cup).unwrap();
-        current_cup_index = if current_cup_index != 8 {
-            current_cup_index + 1
-        } else {
-            0
-        };
+        current_cup = right_neighbour[current_cup];
     }
 
-    cups
+    get_resulting_cups(&right_neighbour, max_cup)
 }
 
 pub fn part_1(cups_data: String) -> String {
@@ -59,10 +73,12 @@ pub fn part_1(cups_data: String) -> String {
         .map(|i| i as usize)
         .collect();
 
-    let moved_cups = simulate_moves(&cups, 100);
+    let moved_cups = simulate_moves(&cups, 9, 100);
+    // println!("The cups are: {moved_cups:?}");
 
     let one_index = moved_cups.iter().position(|c| *c == 1).unwrap();
-    moved_cups.iter()
+    moved_cups
+        .iter()
         .skip(one_index)
         .chain(moved_cups.iter().take(one_index))
         .skip(1)
@@ -76,11 +92,31 @@ pub fn part_2(cups_data: String) -> i64 {
         .map(|i| i as usize)
         .collect();
 
-    cups.extend(10..1_000_000);
+    cups.extend(10..=1_000_000);
+    println!(
+        "I have {} cups and the max cup is {}",
+        cups.len(),
+        cups.iter().max().unwrap()
+    );
+    println!(
+        "The cups are: {:?}",
+        cups.iter().take(20).cloned().collect::<Vec<usize>>()
+    );
 
-    let moved_cups = simulate_moves(&cups, 10_000_000);
+    let moved_cups = simulate_moves(&cups, 1_000_000, 10_000_000);
 
     let one_index = moved_cups.iter().position(|c| *c == 1).unwrap();
+    println!("Index of 1 is {one_index}");
+    println!(
+        "Cups in that region are {:?}",
+        moved_cups
+            .iter()
+            .skip(one_index - 20)
+            .take(21)
+            .cloned()
+            .collect::<Vec<usize>>()
+    );
+
     (moved_cups[one_index - 1] as i64) * (moved_cups[one_index - 2] as i64)
 }
 
@@ -88,8 +124,6 @@ pub fn part_2(cups_data: String) -> i64 {
 mod tests {
     use super::*;
     use rstest::rstest;
-
-    use crate::utilities::file_utilities::get_file_path;
 
     #[rstest]
     #[case("389125467", "67384529")]
