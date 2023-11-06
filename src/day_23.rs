@@ -106,8 +106,16 @@ pub fn part_2(cups_data: String) -> i64 {
     let moved_cups = simulate_moves(&cups, 1_000_000, 10_000_000);
 
     let one_index = moved_cups.iter().position(|c| *c == 1).unwrap();
-    let next_clockwise = if one_index == (1_000_000 - 1) { 0 } else { one_index + 1 };
-    let next_next_clockwise = if next_clockwise == (1_000_000 - 1) { 0 } else { next_clockwise + 1 };
+    let next_clockwise = if one_index == (1_000_000 - 1) {
+        0
+    } else {
+        one_index + 1
+    };
+    let next_next_clockwise = if next_clockwise == (1_000_000 - 1) {
+        0
+    } else {
+        next_clockwise + 1
+    };
 
     (moved_cups[next_clockwise] as i64) * (moved_cups[next_next_clockwise] as i64)
 }
